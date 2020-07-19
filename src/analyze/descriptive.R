@@ -107,4 +107,3 @@ survey_2 %>%
             percent = count / nrow(survey_2)) %>%
   arrange(desc(count)) %>%
   as.data.frame()
-
