@@ -25,7 +25,9 @@ survey_2 <- within(survey_1, {
 
 # PARTICIPANT DEMOGRAPHICS ------------------------------------------------
 
+#######
 # Narrative descriptive statistics
+#######
 
 # Mean and SD of age
 survey_2 %>%
@@ -58,7 +60,9 @@ survey_2 %>%
   summarize(count = n(),
             percent = count / nrow(survey_2))
 
+#######
 # Tabulated descriptive statistics
+#######
 
 # Percent gender
 survey_2 %>%

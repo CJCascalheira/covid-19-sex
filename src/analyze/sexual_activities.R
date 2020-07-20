@@ -15,7 +15,7 @@ sex_act <- survey %>%
 sex_act_list <- sex_act %>%
   select(-ends_with("ING")) %>%
   map(str_split, ",") %>%
-  as_data_frame()
+  as_tibble()
 
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
@@ -28,10 +28,98 @@ within(sex_act, {
   count() %>%
   mutate(percent = n / 565)
 
-# Solo masturbation - but possibly create a FOR loop for this??
-sex_act_list %>%
-  select(starts_with("SA_SOLO")) %>%
-  unlist() %>%
-  as_tibble() %>%
-  group_by(value) %>%
-  count()
+#######
+# Frequencies of sexual activities
+#######
+
+# Prepare the list
+sa_list <- list(sex_act_list[1])
+
+# Counts and percents for all sexual activities (SA)
+for (i in 1:length(sex_act_list)) {
+  
+  # Calculate count and percent for each SA
+  a <- sex_act_list[,i] %>%
+    unlist() %>%
+    as_tibble() %>%
+    group_by(value) %>%
+    count() %>%
+    mutate(percent = n / 565)
+  
+  # Save results to list
+  sa_list[i] <- list(a)
+}
+
+# Name the tibbles across each list
+names(sa_list) <- names(sex_act_list)
+
+# SIGNIFANCE TESTS --------------------------------------------------------
+
+#######
+# Chi-square test of independence - prepare
+#######
+
+# Create temporary tibble
+b <- as_tibble(sa_list)
+
+# Extract the first dataframe from tibble 
+c <- b[1][[1]] %>%
+  ungroup()
+
+# Number of iterations left
+length(sa_list) - 1
+
+# Extract the remaining data using a loop
+for (i in 2:14) {
+  
+  # Repeat the procedure for each, saving to temporary dataframe
+  c <- b[i][[1]] %>%
+    ungroup() %>%
+    rbind(c)
+}
+
+# Get the names of sexual activities
+sa_names_rev <- names(sex_act_list)
+
+# Prepare new dataframe
+sa_names_rev_1 <- tibble(sex_activity = rep(sa_names_rev[1], 5))
+
+# Replicate the names four times, in order, saving as new vector
+for (i in 2:length(sa_names_rev)) {
+  sa_names_rev_1 <- tibble(sex_activity = rep(sa_names_rev[i], 5)) %>%
+    rbind(sa_names_rev_1)
+}
+
+# Create dataframe to use for chi-square analysis
+sa_chi_table <- c %>% 
+  # Add sexual activity names as new variable
+  cbind(sa_names_rev_1) %>%
+  as.data.frame() %>%
+  select(-percent) %>%
+  select(sex_activity, everything()) %>%
+  spread(key = value, value = n)
+
+# Fix names of table
+names(sa_chi_table) <- c("sex_activity", "before", "during", "less", "more", "none")
+
+# Add row names
+rownames(sa_chi_table) <- sa_chi_table[,1]
+
+# Drop sex_activity to create pure frequency table
+sa_chi_table_1 <- sa_chi_table[,-1]
+
+#######
+# Chi-square test of independence - execute
+#######
+
+# Calculate the omnibus chi-square test for before vs. during across sexual activities
+chisq_sa_engaged <- chisq.test(sa_chi_table_1[-c(3:5)])
+
+# Calculate the omnibus chi-square test for less vs. more across sexual activities
+chisq_sa_change <- chisq.test(sa_chi_table_1[-c(1, 2, 5)])
+
+
+
+
+# Individual example
+chisq.test(data.frame(no = 17, unsure = 140, believe = 44))
