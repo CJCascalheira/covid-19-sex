@@ -22,4 +22,6 @@ partner_online_label <- within(partner_online, {
 
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
-# Possibly NLP for RELATIONSHIP_TECH and RELATIONSHIP_QUAL
+# Possibly NLP for 
+# - RELATIONSHIP_TECH
+# - RELATIONSHIP_QUAL
