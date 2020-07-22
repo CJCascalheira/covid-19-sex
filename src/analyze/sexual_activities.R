@@ -188,3 +188,6 @@ sa_chi_table_1 %>%
       panel.border = element_rect(colour = "blue", fill = NA, size = 1)
     ) +
   scale_size_area(max_size = 20)
+
+# Possibly NLP for 
+# - SA_FANTASIZING_QUAL

@@ -172,7 +172,12 @@ porn_label %>%
 porn_label %>%
   select(PORN_PARTNER_KNOW) %>%
   group_by(PORN_PARTNER_KNOW) %>%
-  count()
+  count() %>%
+  filter(PORN_PARTNER_KNOW != "N/A") %>%
+  mutate(percent = n / (87 + 174))
+
+# Number of participants who had a partner and watched porn
+(87 + 174)
 
 # NHST --------------------------------------------------------------------
 
@@ -204,6 +209,13 @@ porn_habits %>%
     mean = mean(PORN_CHANGE_BEFORE),
     sd = sd(PORN_CHANGE_BEFORE)
   )
+
+# Percent of change and not change
+porn_habits %>%
+  group_by(PORN_CHANGE_LOCKDOWN) %>%
+  count() %>%
+  # Remember, one participant dropped due to missing data
+  mutate(percent = n / 564)
 
 # Specify the logistic regression equation with generalized linear model
 porn_habits_logistic <- glm(PORN_CHANGE_LOCKDOWN ~ PORN_CHANGE_BEFORE, 
@@ -258,16 +270,6 @@ porn_habits_logistic_2
 # Summarize the model
 summary(porn_habits_logistic_2)
 
-#######
-# ANOVA
-#######
-
-# Prepare data for ANOVA
-
-#######
-# Is there a difference in the pre-lockdown rate of porn consumption by relationship status?
-#######
-
-#######
-# Is there a difference in the pre-lockdown rate of porn consumption by living arrangement?
-#######
+# Possibly NLP for 
+# - PORN_PARTNER_QUAL
+# - PORN_CHANGE_QUAL

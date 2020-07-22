@@ -21,6 +21,7 @@ soctech_label <- within(soctech, {
                            "3" = "Same")
   SOCTECH_NEWS <- recode(as.character(SOCTECH_NEWS), "0" = "No", "1" = "Yes", "2" = "Unsure")
 })
+soctech_label
 
 # Break up SOCTECH_WHICH
 soctech_which_break <- str_split(soctech$SOCTECH_WHICH, ",") %>%
@@ -40,6 +41,84 @@ soctech_which_break %>%
   arrange(desc(n)) %>%
   # 565 - 28 because 28 did not answer this question
   mutate(percent = n / sum(!is.na(soctech_which_break$value)))
+
+# Other social networks use?
+soctech_label %>%
+  select(SOCTECH_OTHER)
+
+#######
+# Continuous variables
+#######
+
+# How much have you used technology (e.g. Whatsapp, HouseParty, Zoom) to keep 
+# connected to your social circles? 
+soctech_label %>%
+  select(SOCTECH_HOW_MUCH) %>%
+  # Remove missing values n = 2
+  filter(!is.na(SOCTECH_HOW_MUCH)) %>%
+  # Sliding scale ranging from 0 to 100
+  summarize(
+    M = mean(SOCTECH_HOW_MUCH),
+    SD = sd(SOCTECH_HOW_MUCH)
+  )
+
+# Have social networking platforms been useful during the social isolation?
+soctech_label %>%
+  select(SOCTECH_USEFUL) %>%
+  # Remove missing values n = 27
+  filter(!is.na(SOCTECH_USEFUL)) %>%
+  # Likert-type item, so calculate M and SD
+  summarize(
+    M = mean(SOCTECH_USEFUL),
+    SD = sd(SOCTECH_USEFUL)
+  )
+
+# What is your impression of social networking sites during social lockdown?
+soctech_label %>%
+  select(SOCTECH_IMPRESSION) %>%
+  # Remove missing values n = 27
+  filter(!is.na(SOCTECH_IMPRESSION)) %>%
+  # Likert-type item, so calculate M and SD
+  summarize(
+    M = mean(SOCTECH_IMPRESSION),
+    SD = sd(SOCTECH_IMPRESSION)
+  )
+
+#######
+# Discrete variables
+#######
+
+# Do you currently have a profile on a social networking platform? 
+soctech_label %>%
+  select(SOCTECH_CURENT) %>%
+  group_by(SOCTECH_CURENT) %>%
+  count() %>%
+  mutate(percent = n / 565)
+
+# Have you signed up to any new platforms since the social isolation?
+soctech_label %>%
+  select(SOCTECH_SIGNUP) %>%
+  group_by(SOCTECH_SIGNUP) %>%
+  count() %>%
+  mutate(percent = n / 565)
+
+# How has your use of social networking platforms changed during social isolation?
+soctech_label %>%
+  select(SOCTECH_CHANGE) %>%
+  group_by(SOCTECH_CHANGE) %>%
+  count() %>%
+  mutate(percent = n / 565)
+
+# Have you used social networking platforms to keep up to date with the latest news?
+soctech_label %>%
+  select(SOCTECH_NEWS) %>%
+  group_by(SOCTECH_NEWS) %>%
+  count() %>%
+  mutate(percent = n / 565)
+
+
+
+
 
 # Likert-type items
 # - SOCTECH_USEFUL
