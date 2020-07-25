@@ -1,5 +1,7 @@
 # Dependencies
 library(tidyverse)
+library(chisq.posthoc.test)
+library(car)
 
 # Import
 survey <- read_csv("data/covid_sex_tech.csv")
@@ -8,14 +10,19 @@ survey <- read_csv("data/covid_sex_tech.csv")
 
 # Select the main variables
 sex_act <- survey %>%
-  select(starts_with("SA")) %>%
+  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, starts_with("SA")) %>%
   select(-ends_with("QUAL"))
 
 # Split the values across variables
 sex_act_list <- sex_act %>%
-  select(-ends_with("ING")) %>%
+  select(-ends_with("ING"), -RELATIONSHIP_STATUS) %>%
   map(str_split, ",") %>%
   as_tibble()
+sex_act_list
+
+# Drop ID column
+sex_act_list <- sex_act_list[-1]
+sex_act_list
 
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
@@ -56,7 +63,10 @@ names(sa_list) <- names(sex_act_list)
 # Ignore NA because NA is a product of the operation
 sa_list
 
-# SIGNIFANCE TESTS --------------------------------------------------------
+# CHI-SQUARE OMNIBUS -------------------------------------------------------
+
+# Chi-square for sexual activities probably inappropriate for within subject 
+# variables, so consult
 
 #######
 # Chi-square test of independence - prepare
@@ -188,6 +198,172 @@ sa_chi_table_1 %>%
       panel.border = element_rect(colour = "blue", fill = NA, size = 1)
     ) +
   scale_size_area(max_size = 20)
+
+# INCREASES IN SEXUAL ACTIVITIES ------------------------------------------
+
+#######
+# Current living situation and sexual fantasizing
+#######
+
+# Prepare living status for chi-square
+sex_act_living <- sex_act %>%
+  select(CURRENT_LIVING, SA_STARTED_FANTASIZING) %>%
+  mutate(CURRENT_LIVING = recode(CURRENT_LIVING, 
+                                 "Living w/ Children" = "Children or Family",
+                                 "Living w/ Other Family" = "Children or Family",
+                                 "Living w/ Others" = "Friends or Others",
+                                 "Living w/ Friends" = "Friends or Others")) %>%
+  table()
+sex_act_living
+
+# Execute chi-square analysis
+sal_chisq <- chisq.test(sex_act_living)
+sal_chisq
+
+# Effect size - Cramer's V
+sqrt(
+  sal_chisq$statistic[[1]] / (565 * (2 - 1))
+)
+
+# Post-hoc pairwise comparisons
+chisq.posthoc.test(sex_act_living, method = "bonferroni")
+
+# Significant comparisons - Children or Family
+sex_act_living[1, 1] / (sex_act_living[1, 1] + sex_act_living[1, 2])
+sex_act_living[1, 2] / (sex_act_living[1, 1] + sex_act_living[1, 2])
+
+# Significant comparisons - Partner
+sex_act_living[4, 1] / (sex_act_living[4, 1] + sex_act_living[4, 2])
+sex_act_living[4, 2] / (sex_act_living[4, 1] + sex_act_living[4, 2])
+
+#######
+# Relationship status and sexual fantasizing
+#######
+
+# Prepare relationship status for chi-square
+sex_act_relation <- sex_act %>%
+  select(RELATIONSHIP_STATUS, SA_STARTED_FANTASIZING) %>%
+  table()
+sex_act_relation
+
+# Execute chi-square analysis
+sar_chisq <- chisq.test(sex_act_relation)
+sar_chisq
+
+# Effect size - Cramer's V
+# Remember, three participants removed due to NA relationship status
+sqrt(
+  sar_chisq$statistic[[1]] / (562 * (2 - 1))
+)
+
+# Post-hoc pairwise comparisons
+chisq.posthoc.test(sex_act_relation, method = "bonferroni")
+
+#######
+# Prepare data for test of significant increases in sexual activity over all
+#######
+
+# Prepare the data frame
+sex_act_1 <- sex_act %>%
+  select(-SA_STARTED_FANTASIZING) %>%
+  mutate(increased = rep(0, 565)) %>%
+  select(ID, increased, everything())
+sex_act_1
+
+# Recode all NA values
+sex_act_2 <- sex_act_1 %>%
+  mutate_at(vars(SA_SOLOMASTURBATION, SA_MUTUALMASTURBATION, SA_INTERCOURSEWITHPARTNER,
+                 SA_INTERCOURSEWITHNONPARTNER, SA_SEXTOYSSOLO, SA_SEXTOYSWITHPARTNER,
+                 SA_WATCHPORNSOLO, SA_WATCHPORNWITHPARTNER, SA_SEXTEDWITHPARTNER,
+                 SA_SEXTEDWITHNONPARTNER, SA_SENTNUDESTOPARTNER, SA_SENTNUDESTONONPARTNER,
+                 SA_ROLEPLAYPARTNER, SA_ROLEPLAYNONPARTNER),
+    function(x) ifelse(
+      is.na(x), "none", x
+    )
+  )
+sex_act_2
+
+# Participants who reported a sexual activity
+sex_act_3 <- sex_act_2 %>%
+  gather(key = variable, value = engaged, 
+         -c(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, increased)) %>%
+# Tally the increases
+  mutate(increased = ifelse(
+    str_detect(engaged, regex("^*more", ignore_case = TRUE)), 
+    increased + 1, increased + 0
+  )) %>%
+  group_by(ID) %>%
+  count(increased) %>%
+  filter(increased == 1) %>%
+  ungroup()
+sex_act_3
+
+# Percent of participants reporting more sexual activity
+nrow(sex_act_3) / 565
+
+# Reconstruct the data frame w/ participants who reported no increases plus 
+# participants who reported an increase greater than 0
+sex_act_4 <- sex_act_2 %>%
+  filter(!(ID %in% sex_act_3$ID)) %>%
+  select(ID, increased) %>%
+  mutate(n = rep(0, length(ID))) %>%
+  rbind(sex_act_3) %>%
+  full_join(
+    sex_act_2 %>%
+      select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING)
+  ) %>%
+  select(-increased)
+sex_act_4
+
+# COMPARE MEANS - RELATIONSHIP STATUS -------------------------------------
+
+# Remove NA values
+sex_act_4_rs <- sex_act_4 %>%
+  filter(!is.na(RELATIONSHIP_STATUS)) %>%
+  mutate(RELATIONSHIP_STATUS = recode(RELATIONSHIP_STATUS, "Single" = "Single or Casual",
+                           "Casual Relationship" = "Single or Casual"))
+sex_act_4_rs
+
+# Describe increases in activities by relationship
+sex_act_4_rs %>%
+  group_by(RELATIONSHIP_STATUS) %>%
+  summarize(
+    M = mean(n),
+    SD = sd(n)
+  )
+
+#######
+# Assumptions
+#######
+
+# Are the distributions normal or at least symmetrical?
+ggplot(sex_act_4_rs, aes(x = n)) +
+  geom_histogram() +
+  facet_grid(~ RELATIONSHIP_STATUS)
+
+# Sample is not approximately equal in size for each group, but is greater than 25 per group
+sex_act_4_rs %>%
+  group_by(RELATIONSHIP_STATUS) %>%
+  count()
+
+# Homogeneity of variance
+leveneTest(n ~ RELATIONSHIP_STATUS, data = sex_act_4_rs)
+
+#######
+# Independent t-test
+#######
+
+# Run the t-test
+rs_t_test <- t.test(n ~ RELATIONSHIP_STATUS, data = sex_act_4_rs, var.equal = TRUE)
+rs_t_test
+
+# Effect size = Cohen's d
+rs_t_test$statistic * sqrt(
+  (341 + 222) / (341 * 222)
+)
+
+# COMPARE MEANS - CURRENT LIVING ------------------------------------------
+
 
 # Possibly NLP for 
 # - SA_FANTASIZING_QUAL

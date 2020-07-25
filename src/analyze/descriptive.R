@@ -111,3 +111,7 @@ survey_2 %>%
             percent = count / nrow(survey_2)) %>%
   arrange(desc(count)) %>%
   as.data.frame()
+
+# Anyone single and living alone?
+survey_2 %>%
+  filter(RELATIONSHIP_STATUS == "Single" & CURRENT_LIVING == "Alone")

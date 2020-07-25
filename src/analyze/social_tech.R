@@ -30,7 +30,8 @@ soctech_which_break <- str_split(soctech$SOCTECH_WHICH, ",") %>%
 
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
-# How many participants did not select social media?
+# How many participants did not select social media? 
+# Note, this returns 28 and a subsequent analysis returns 27
 sum(is.na(soctech$SOCTECH_WHICH))
 
 # Describe SOCTECH_WHICH
@@ -40,11 +41,12 @@ soctech_which_break %>%
   count() %>%
   arrange(desc(n)) %>%
   # 565 - 28 because 28 did not answer this question
-  mutate(percent = n / sum(!is.na(soctech_which_break$value)))
+  mutate(percent = n / 565)
 
 # Other social networks use?
 soctech_label %>%
-  select(SOCTECH_OTHER)
+  select(SOCTECH_OTHER) %>%
+  filter(!is.na(SOCTECH_OTHER))
 
 #######
 # Continuous variables
