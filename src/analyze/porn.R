@@ -270,6 +270,222 @@ porn_habits_logistic_2
 # Summarize the model
 summary(porn_habits_logistic_2)
 
-# Possibly NLP for 
+# OPEN-ENDED DATA ANALYSES ------------------------------------------------
+
+# Prepare data
+porn_qual <- survey %>%
+  select(starts_with("PORN")) %>%
+  select(PORN_PARTNER_KNOW, ends_with("QUAL"))
+porn_qual
+
+#######
 # - PORN_PARTNER_QUAL
-# - PORN_CHANGE_QUAL
+# Why does your partner not know about your pornography use?
+#######
+
+# Select only the participants whose partners do not know
+partner_qual <- porn_qual %>%
+  filter(PORN_PARTNER_KNOW == 0) %>%
+  # Drop unnecessary variables
+  select(PORN_PARTNER_QUAL) %>%
+  # Code rationales using regular expressions
+  mutate(
+    self_con_emo = ifelse(str_detect(PORN_PARTNER_QUAL, 
+                                     regex("^*embar|shame", ignore_case = TRUE)), 
+                          1, 0),
+    come_up = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                regex("^*come up|comes up|came up|never ask|speak about|discus|talk|ask|convers|haven't told", ignore_case = TRUE)),
+                     1, 0),
+    comfort = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                regex("^*comfort", ignore_case = TRUE)),
+                     1, 0),
+    private = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                regex("^*keep|private|hide|share|want her to", ignore_case = TRUE)),
+                     1, 0),
+    unsure = ifelse(str_detect(PORN_PARTNER_QUAL,
+                               regex("^*unsure|dont know|don't know", ignore_case = TRUE)),
+                    1, 0),
+    no_reason = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                  regex("^*reason", ignore_case = TRUE)),
+                       1, 0),
+    no_need = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                regex("^*unnec|need to", ignore_case = TRUE)),
+                     1, 0),
+    prcvd_disprv = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                     regex("^*conserv|approv|finds it|interested|happy about|argument|hurt in the past|like how much", ignore_case = TRUE)),
+                          1, 0),
+    sex_drive = ifelse(str_detect(PORN_PARTNER_QUAL,
+                                  regex("^*sex drive|kicks|not in the mood", ignore_case = TRUE)),
+                       1, 0)
+  )
+partner_qual
+
+# Determine which reasons still exist, an other category
+partner_qual %>%
+  filter(
+    self_con_emo != 1 &
+    come_up != 1 &
+    comfort != 1 &
+    private != 1 &
+    unsure != 1 &
+    no_reason != 1 &
+    no_need != 1 &
+    prcvd_disprv != 1 &
+    sex_drive != 1
+  )
+
+# Percentage of other
+4 / nrow(partner_qual)
+
+# Gather code occurrences into long format
+partner_qual_long <- partner_qual %>%
+  # Drop unnecessary column
+  select(-PORN_PARTNER_QUAL) %>%
+  gather(key = "code", value = "present") %>%
+  filter(present != 0)
+partner_qual_long
+
+# Number of participants with more than one code
+nrow(partner_qual_long) - nrow(partner_qual)
+
+# Organize by most common categories
+partner_qual_long %>%
+  group_by(code) %>%
+  count() %>%
+  mutate(percent = (n / nrow(partner_qual)) * 100) %>%
+  arrange(desc(n))
+
+# Note: the categories no_reason and unsure were combined
+
+#######
+# PORN_CHANGE_QUAL
+# How has the amount or pornography viewed during social lockdown changed?
+#######
+
+# Prepare the data
+change_qual <- survey %>%
+  select(PORN_CHANGE_LOCKDOWN, PORN_CHANGE_QUAL) %>%
+  # Remove participants who reported no change (i.e., 2)
+  filter(PORN_CHANGE_LOCKDOWN != 2) %>%
+  # Remove participants who did not describe how their porn use changed
+  filter(!is.na(PORN_CHANGE_QUAL))
+change_qual
+
+# Number of participants reporting a reason
+nrow(change_qual) / 202
+
+# 1 = increase
+change_inc <- change_qual %>%
+  filter(PORN_CHANGE_LOCKDOWN == 1) %>%
+  # Conventional content analysis
+  mutate(
+    boredom = ifelse(str_detect(PORN_CHANGE_QUAL,
+                                regex("^*bore|nothing else|nothing bett|to do", ignore_case = TRUE)),
+                     1, 0),
+    time = ifelse(str_detect(PORN_CHANGE_QUAL,
+                             regex("^*free time|more time", ignore_case = TRUE)),
+                  1, 0),
+    stress = ifelse(str_detect(PORN_CHANGE_QUAL,
+                               regex("^*stress|feel bett|relie|frustra", ignore_case = TRUE)),
+                    1, 0),
+    alone = ifelse(str_detect(PORN_CHANGE_QUAL,
+                              regex("^*lone|see.+my|got my|have my|sex anymore|deprived|died|live with my|less intim|lack of any s", ignore_case = TRUE)),
+                   1, 0),
+    rate = ifelse(str_detect(PORN_CHANGE_QUAL,
+                             regex("^*daily|once|increase|a week|a month|other day|watch+.+more|more incli|every now", ignore_case = TRUE)),
+                  1, 0),
+    partner_fct = ifelse(str_detect(PORN_CHANGE_QUAL,
+                                    regex("^*watch togeth|with her|long distance|into my rel|wanting my part", ignore_case = TRUE)),
+                         1, 0)
+  )
+change_inc
+
+# Identify which responses remain
+change_inc_other <- change_inc %>%
+  filter(
+    boredom != 1 &
+    time != 1 &
+    stress != 1 &
+    alone != 1 &
+    rate != 1 &
+    partner_fct != 1
+  )
+change_inc_other
+
+# % in other category for participants reporting an increase 
+nrow(change_inc_other) / nrow(change_inc)
+
+# Calculate counts
+change_inc %>%
+  select(-starts_with("PORN")) %>%
+  # Long format
+  gather(key = "code", value = "present") %>%
+  # Filter out non-occurrences 
+  filter(present != 0) %>%
+  group_by(code) %>%
+  count() %>%
+  mutate(percent = (n / nrow(change_inc)) * 100) %>%
+  arrange(desc(n))
+
+# Example of partner factor
+change_inc %>%
+  filter(partner_fct == 1) %>%
+  View()
+
+# 3 = decrease
+change_dec <- change_qual %>%
+  filter(PORN_CHANGE_LOCKDOWN == 3) %>%
+  # Code the qualitative data using conventional content analysis principles
+  mutate(
+    not_alone = ifelse(str_detect(PORN_CHANGE_QUAL,
+                                  regex("^*alone|with me|more time with|no time|around|living with|more people|kid|child|parent|is home|all.+time|with.+partner|my.+home|partner.+home|time.+myself|dont watch|my boyfr", ignore_case = TRUE)),
+                       1, 0),
+    sex_drive = ifelse(str_detect(PORN_CHANGE_QUAL,
+                                  regex("^*sex drive|urge|mood|too tired|feel like|sex.+desire|sex.+app", ignore_case = TRUE)),
+                       1, 0),
+    rate = ifelse(str_detect(PORN_CHANGE_QUAL,
+                        regex("^*less need|not watch|hardly|occas|haven't watch|less porn|watch less", ignore_case = TRUE)),
+             1, 0),
+    interest = ifelse(str_detect(PORN_CHANGE_QUAL,
+                                 regex("^*interest", ignore_case = TRUE)),
+                      1, 0),
+    # Language of addiction
+    addict = ifelse(str_detect(PORN_CHANGE_QUAL,
+                               regex("^*control|addic|giv.+up|cut back|need to use", ignore_case = TRUE)),
+                    1, 0),
+    unsure = ifelse(str_detect(PORN_CHANGE_QUAL,
+                               regex("^*reason|don't know|know.+why|not.+sure", ignore_case = TRUE)),
+                    1, 0),
+    # Busy or prioritize other activities
+    busy = ifelse(str_detect(PORN_CHANGE_QUAL,
+                             regex("bus|other things|prefer", ignore_case = TRUE)),
+                  1, 0)
+  )
+change_dec
+
+# Identify which responses remain
+change_dec %>%
+  filter(
+    not_alone != 1 &
+    sex_drive != 1 &
+    rate != 1 &
+    interest != 1 &
+    addict != 1 &
+    unsure != 1 &
+    busy != 1
+  )
+
+# % in other category for participants reporting a decrease
+3 / nrow(change_dec)
+
+# Calculate frequencies
+change_dec %>%
+  # Drop unnecessary columns
+  select(-starts_with("PORN")) %>%
+  gather(key = "code", value = "present") %>%
+  # Remove non-occurrences 
+  filter(present != 0) %>%
+  group_by(code) %>%
+  count() %>%
+  mutate(percent = (n / nrow(change_dec)) * 100) %>%
+  arrange(desc(n))
