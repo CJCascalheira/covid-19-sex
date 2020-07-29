@@ -1,7 +1,7 @@
 # Dependencies
+library(car)
 library(tidyverse)
 library(chisq.posthoc.test)
-library(car)
 
 # Import
 survey <- read_csv("data/covid_sex_tech.csv")
@@ -364,6 +364,162 @@ rs_t_test$statistic * sqrt(
 
 # COMPARE MEANS - CURRENT LIVING ------------------------------------------
 
+# Prepare data
+sex_act_4_cl <- sex_act_4 %>%
+  mutate(
+    CURRENT_LIVING = recode(CURRENT_LIVING, 
+                            "Living w/ Children" = "Children or Family",
+                            "Living w/ Other Family" = "Children or Family",
+                            "Living w/ Others" = "Friends or Others",
+                            "Living w/ Friends" = "Friends or Others")
+  )
+sex_act_4_cl
 
-# Possibly NLP for 
-# - SA_FANTASIZING_QUAL
+#######
+# Assumptions
+#######
+
+# Do the distributions look normal and symmetrical?
+ggplot(sex_act_4_cl, aes(x = n)) +
+  geom_histogram() +
+  facet_grid(~ CURRENT_LIVING)
+
+# Homogeneity of variance
+leveneTest(n ~ CURRENT_LIVING, data = sex_act_4_cl)
+
+# Groups are not equal in size
+sex_act_4_cl %>%
+  count(CURRENT_LIVING)
+
+# Normality - prepare data
+unique_cl <- unique(sex_act_4_cl$CURRENT_LIVING)
+unique_cl
+
+# Shapiro-Wilk across variables to check for normality within each group
+# Note: SW test not ideal for groups with n > 50
+sex_act_4_cl %>%
+  filter(CURRENT_LIVING == unique_cl[5]) %>%
+  select(n) %>%
+  pull() %>%
+  shapiro.test()
+
+#######
+# One-way ANOVA
+#######
+
+# Fit the model to the data
+one_way <- aov(n ~ CURRENT_LIVING, data = sex_act_4_cl)
+one_way
+
+# Summarize the model
+summary(one_way)
+
+# WHY FANTASIES CHANGES ---------------------------------------------------
+
+# Prepare data frame
+sa_qual <- survey %>%
+  select(ID, starts_with(c("SA_START", "SA_FANTA"))) %>%
+  filter(!is.na(SA_FANTASIZING_QUAL))
+sa_qual
+
+# Percent reporting a qualitative reason
+186 / 194
+
+# When people mention "dreams" what do they mean?
+dreams <- str_detect(sa_qual$SA_FANTASIZING_QUAL, regex("^*dream", ignore_case = TRUE))
+sa_qual[dreams,]
+
+# Manual review indicates that dreams refer to increases in fantasizing
+
+# Script to count common themes
+sa_qual_code <- sa_qual %>%
+  select(SA_FANTASIZING_QUAL) %>%
+  # Script constructed interatively by glancing through the written responses to identify
+  # key words for the regular expression
+  mutate(
+    # More fantasies, greater frequency
+    more = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                             regex("^*frequen|often|fanst|more of them|increase|more common|more physic|occur more|dream|it more|sex more|more sex", 
+                                   ignore_case = TRUE)), 
+                   1, 0),
+    # Being outside or in public
+    outside = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                                regex("^*outside|place|other person", 
+                                      ignore_case = TRUE)), 
+                   1, 0),
+    # Other people in life
+    others = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                               regex("^*people|celebr|women|man|don't care who|person|multi|more partne", 
+                                     ignore_case = TRUE)), 
+                      1, 0),
+    # Longing for partner
+    partner = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                                regex("^*my partner|wife|see each other", 
+                                      ignore_case = TRUE)), 
+                      1, 0),
+    # Greater intensity, variety
+    intense_var = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                                    regex("^*intense|elabor|vari|vivid|expand|fun|different|new thing|extreme|hardcore|curious|exotic|niche|explor|more desire", 
+                                          ignore_case = TRUE)), 
+                      1, 0),
+    # No change in fantasizing
+    none = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                             regex("^*none|not chang|unchang|don't have|haven't", 
+                                   ignore_case = TRUE)), 
+                      1, 0),
+    # Greater intimacy
+    intimacy = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                                 regex("^*hug|more romantic|intima|passion", 
+                                       ignore_case = TRUE)), 
+                      1, 0),
+    # Not sure about the change
+    unsure = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                               regex("^*don't know|unsure", 
+                                     ignore_case = TRUE)), 
+                      1, 0),
+    # Changes in time, boredom
+    time = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                               regex("^*time|bore|without sex|frustrated|house bound|not being bale|lockdown", 
+                                     ignore_case = TRUE)), 
+                    1, 0),
+    # A category of coding to capture other fantasies
+    bucket = ifelse(str_detect(SA_FANTASIZING_QUAL, 
+                               regex("^*dicks|sexting|escort|dominant|shag|single|mello", 
+                                     ignore_case = TRUE)), 
+                      1, 0)
+  )
+sa_qual_code
+
+# Filter script to determine which responses belong in the bucket
+sa_qual_code %>%
+  filter(
+    more == 0 &
+    outside == 0 &
+    others == 0 &
+    partner == 0 &
+    intense_var == 0 &
+    none == 0 &
+    intimacy == 0 &
+    unsure == 0 &
+    time == 0 &
+    bucket == 0
+  )
+
+# Frequencies of codes
+sa_qual_code %>%
+  select(-starts_with("SA_")) %>%
+  gather(key = "code", value = "present") %>%
+  # Get frequencies
+  group_by(code) %>%
+  count(present) %>%
+  # Remove non-occurrences
+  filter(present != 0) %>%
+  # Calculate present
+  mutate(percent = (n / nrow(sa_qual_code)) * 100) %>%
+  # Most common on top of dataframe
+  arrange(desc(n))
+
+# Find quotes for table; note, change the name of the variable to explore the quotes with View()
+a <- sa_qual_code %>%
+  filter(outside == 1)
+View(a)
