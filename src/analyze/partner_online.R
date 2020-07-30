@@ -3,12 +3,13 @@ library(tidyverse)
 
 # Import
 survey <- read_csv("data/covid_sex_tech.csv")
+total_measures <- read_csv("data/total_measures.csv")
 
 # CLEAN PARTNER ONLINE VARIABLES ------------------------------------------
 
 # Select primary variables
 partner_online <- survey %>%
-  select(starts_with(c("PARTNER", "ONLINE")), RELATIONSHIP_STATUS) %>%
+  select(ID, starts_with(c("PARTNER", "ONLINE")), RELATIONSHIP_STATUS) %>%
   select(-ends_with(c("QUAL"))) 
 
 # Label all of the values across variables
@@ -54,9 +55,57 @@ partner_online_label %>%
   mutate(percent = n / 565) %>%
   arrange(desc(n), ONLINE_CHANGE)
 
+# NHST - H4a --------------------------------------------------------------
 
+# Prepare data for logistic regressions
+partner_nhst <- partner_online %>%
+  # Join with total scores of the continuous measures
+  left_join(total_measures, by = "ID") %>%
+  # Remove participants who did not specify a relationship status
+  filter(!is.na(RELATIONSHIP_STATUS)) %>%
+  mutate(
+    # Combine participants who are single and dating casually
+    RELATIONSHIP_STATUS = recode(RELATIONSHIP_STATUS, "Single" = "single_casual", 
+                                 "Casual Relationship" = "single_casual"),
+    # 0 = decrease; 1 = increase
+    ONLINE_CHANGE = recode(ONLINE_CHANGE, `2` = 0)
+  ) %>%
+  # Drop unnecessary columns
+  select(-c(PARTNER_CONTACT_TECH, ONLINE_BEFORE))
+partner_nhst
 
+#######
+# Logistic regression 
+# For more information, see: https://stats.idre.ucla.edu/r/dae/logit-regression/
+#######
 
+# Isolate the variables for first logistic regression
+p_nhst_current <- partner_nhst %>%
+  filter(ONLINE_CURRENT != 99 & RELATIONSHIP_STATUS != "Serious Relationship")
+p_nhst_current
+
+# Specify the logistic regression model
+current_logit <- glm(ONLINE_CURRENT ~ SDI_SCORE + LONEV3_SCORE + MSPSS_SCORE, 
+                     data = p_nhst_current, family = "binomial")
+current_logit
+
+# Summary of the model
+summary(current_logit)
+
+# NHST - H4b --------------------------------------------------------------
+
+# Isolate the variables for the second logistic regression
+p_nhst_change <- partner_nhst %>%
+  filter(!is.na(ONLINE_CHANGE) & ONLINE_CHANGE != 3 & RELATIONSHIP_STATUS != "Serious Relationship")
+p_nhst_change  
+
+# Specify the logistic regression model
+change_logit <- glm(ONLINE_CHANGE ~ SDI_SCORE + LONEV3_SCORE + MSPSS_SCORE, 
+                    data = p_nhst_change, family = "binomial")
+change_logit
+
+# Summary of the model
+summary(change_logit)
 
 
 
