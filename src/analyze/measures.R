@@ -69,20 +69,8 @@ SDI
 # Total LONEV3 score from 20 items
 LONEV3 <- measures %>%
   select(ID, starts_with("LONE")) %>%
-  # Reverse scores the items based on the article
-  # Note that the values were already reversed scored
-#  within({
-#    LONEV3_1 <- recode(LONEV3_1, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_5 <- recode(LONEV3_5, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_6 <- recode(LONEV3_6, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_9 <- recode(LONEV3_9, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_10 <- recode(LONEV3_10, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_15 <- recode(LONEV3_15, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_16 <- recode(LONEV3_16, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_19 <- recode(LONEV3_19, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#    LONEV3_20 <- recode(LONEV3_20, `1` = 4L, `2` = 3L, `3` = 2L, `4` = 1L)
-#  }) %>%
-  # Long format for total score
+  # Reverse scores the items based on the article, but note that the values were already reversed scored
+  # by LW, so long format for total score
   gather(key = "items", value = "raw_scores", -ID) %>%
   group_by(ID) %>%
   # Sum the raw scores for total loneliness

@@ -55,6 +55,9 @@ partner_online_label %>%
   mutate(percent = n / 565) %>%
   arrange(desc(n), ONLINE_CHANGE)
 
+# Note - makes no sense to explore MSPSS and LONEV3 given that many participants lived with
+# somebody else during the pandemic. 
+
 # NHST - H4a --------------------------------------------------------------
 
 # Prepare data for logistic regressions
@@ -84,13 +87,42 @@ p_nhst_current <- partner_nhst %>%
   filter(ONLINE_CURRENT != 99 & RELATIONSHIP_STATUS != "Serious Relationship")
 p_nhst_current
 
+# Describe the measures for this subsample
+p_nhst_current %>%
+  select(ends_with("SCORE")) %>%
+  gather(key = "measure", value = "score") %>%
+  group_by(measure) %>%
+  summarize(
+    M = mean(score),
+    SD = sd(score)
+  )
+
 # Specify the logistic regression model
-current_logit <- glm(ONLINE_CURRENT ~ SDI_SCORE + LONEV3_SCORE + MSPSS_SCORE, 
-                     data = p_nhst_current, family = "binomial")
+current_logit <- glm(ONLINE_CURRENT ~ SDI_SCORE, data = p_nhst_current, family = "binomial")
 current_logit
 
 # Summary of the model
 summary(current_logit)
+
+# Wald's chi-square statistic = ((beta - 0) / SE_beta)^2
+# Zero omitted for clarity
+# Note: same as z value ^ 2
+((current_logit$coefficients[1]) / 0.528185)^2
+((current_logit$coefficients[2]) / 0.008647)^2
+
+# Exponentiate the coefficients to interpret as odds-ratios
+exp(
+  coef(current_logit)
+)
+
+# Model fit - difference in deviance
+with(current_logit, null.deviance - deviance)
+
+# Model fit - degrees of freedom
+with(current_logit, df.null - df.residual)
+
+# Model fit - significance
+with(current_logit, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
 
 # NHST - H4b --------------------------------------------------------------
 
@@ -99,13 +131,26 @@ p_nhst_change <- partner_nhst %>%
   filter(!is.na(ONLINE_CHANGE) & ONLINE_CHANGE != 3 & RELATIONSHIP_STATUS != "Serious Relationship")
 p_nhst_change  
 
+# Describe the measures for this subsample
+p_nhst_change %>%
+  select(ends_with("SCORE")) %>%
+  gather(key = "measure", value = "score") %>%
+  group_by(measure) %>%
+  summarize(
+    M = mean(score),
+    SD = sd(score)
+  )
+
 # Specify the logistic regression model
-change_logit <- glm(ONLINE_CHANGE ~ SDI_SCORE + LONEV3_SCORE + MSPSS_SCORE, 
-                    data = p_nhst_change, family = "binomial")
+change_logit <- glm(ONLINE_CHANGE ~ SDI_SCORE, data = p_nhst_change, family = "binomial")
 change_logit
 
 # Summary of the model
 summary(change_logit)
+
+
+
+
 
 
 
