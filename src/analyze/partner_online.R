@@ -148,16 +148,19 @@ change_logit
 # Summary of the model
 summary(change_logit)
 
+# NLP - PARTNER_CONTACT_QUAL ----------------------------------------------
 
+# How have you maintained contact with your partner?
 
+# NLP - ONLINE_QUAL -------------------------------------------------------
 
+# Please explain how your use of online dating websites has changes, if at all?
 
+# NLP - RELATIONSHIP_TECH -------------------------------------------------
 
+# How has technology impacted on your relationship?
 
+# NLP - RELATIONSHIP_QUAL -------------------------------------------------
 
-
-# Possibly NLP for 
-# - PARTNER_CONTACT_QUAL
-# - ONLINE_QUAL
-# - RELATIONSHIP_TECH
-# - RELATIONSHIP_QUAL
+# In your own words, please explain how the current COVID-19 pandemic and social lockdown 
+# has affected your intimate relationship(s), both positively and negatively:

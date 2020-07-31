@@ -118,13 +118,26 @@ soctech_label %>%
   count() %>%
   mutate(percent = n / 565)
 
-
-
-
-
 # Likert-type items
 # - SOCTECH_USEFUL
 # - SOCTECH_IMPRESSION
 
-# Possibly NLP for QUAL variables and:
-# - SOCTECH_TRANSITION
+# NLP - SOCTECH_TRANSITION ------------------------------------------------
+
+# If you used SNS more, please describe the transition in moving from communication in-person to online?
+
+# NLP - SOCTECH_SIGNUP_QUAL -----------------------------------------------
+
+# If you signed up for new SNS, which platforms have you signed up to?
+
+# NLP - SOCTECH_USEFUL_QUAL -----------------------------------------------
+
+# If SNS has been useful during social isolation, how have they been useful?
+
+# NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
+
+# How have you used SNS to keep up to date with the latest news?
+
+# NLP - SOCTECH_IMPRESSION_QUAL -------------------------------------------
+
+# Please explain your impression of SNS during social lockdown?
