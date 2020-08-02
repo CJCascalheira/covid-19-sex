@@ -22,6 +22,12 @@ partner_online_label <- within(partner_online, {
 })
 partner_online_label
 
+# Select qualitative variables
+partner_qual <- survey %>%
+  select(ID, PARTNER_CONTACT_QUAL, ONLINE_QUAL, RELATIONSHIP_TECH, RELATIONSHIP_QUAL) %>%
+  left_join(partner_online_label, by = "ID")
+partner_qual
+
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
 # "Have you used technology more to keep in contact with your partner?"
@@ -148,19 +154,274 @@ change_logit
 # Summary of the model
 summary(change_logit)
 
-# NLP - PARTNER_CONTACT_QUAL ----------------------------------------------
-
-# How have you maintained contact with your partner?
-
 # NLP - ONLINE_QUAL -------------------------------------------------------
 
 # Please explain how your use of online dating websites has changes, if at all?
+#######
+
+# How many provided a reason for their change in onling dating use?
+partner_qual %>%
+  filter(!is.na(ONLINE_QUAL) & ONLINE_CHANGE != "Same" & RELATIONSHIP_STATUS != "Serious Relationship")
+
+# Classify the reasons using regular expressions
+p_qual_online <- partner_qual %>%
+  # Remove people who reported that their use remained the same & people in serious relationships
+  filter(!is.na(ONLINE_QUAL) & ONLINE_CHANGE != "Same" & RELATIONSHIP_STATUS != "Serious Relationship") %>%
+  select(ONLINE_CHANGE, ONLINE_QUAL) %>%
+  mutate(
+    # Generally bored or find the app / person boring
+    boredom = ifelse(str_detect(ONLINE_QUAL, 
+                                regex("^*bore|conversat|nothing to talk|never enjoyed", ignore_case = TRUE)),
+      1, 0
+    ),
+    time = ifelse(str_detect(ONLINE_QUAL,
+                             regex("^*more.+time", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Inability to meet
+    meet = ifelse(str_detect(ONLINE_QUAL,
+                           regex("^*can.+t meet|can't go|see people|lockdown|lock down|meet.+people|meet up| meet face|ee.+anyone|contact with|leave.+house|keep.+distance", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Found a loving relationship
+    love = ifelse(str_detect(ONLINE_QUAL,
+                             regex("^*love|relationship", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+p_qual_online
+
+# Check for other responses
+p_qual_online_1 <- p_qual_online %>%
+  filter(
+    boredom !=1 &
+    time != 1 &
+    meet != 1 &
+    love != 1
+  ) %>%
+  # Assign to a theme
+  mutate(other = rep(1, nrow(.))) %>%
+  # Prepare to join with other data frame
+  group_by(ONLINE_CHANGE) %>%
+  count(other) %>%
+  ungroup() %>%
+  mutate(percent = n / nrow(p_qual_online),
+         theme = rep("other", 2)) %>%
+  select(ONLINE_CHANGE, theme, everything(), -other)
+p_qual_online_1
+
+# Themes by increase or decrease
+p_qual_online %>%
+  select(-ONLINE_QUAL) %>%
+  gather(key = "theme", value = "occurrence", -ONLINE_CHANGE) %>%
+  # Remove zeros because the theme was not present
+  filter(occurrence != 0) %>%
+  group_by(ONLINE_CHANGE) %>%
+  # How often did the theme occur by group
+  count(theme) %>%
+  mutate(percent = (n / nrow(p_qual_online)) * 100) %>%
+  ungroup() %>%
+  rbind(p_qual_online_1) %>%
+  arrange(desc(n))
+
+# NLP - PARTNER_CONTACT_QUAL ----------------------------------------------
+
+# How have you maintained contact with your partner?
+#######
+
+# Percent of participants in serious relationships providing descriptions 
+partner_qual %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
+
+# Classify the routines of maintaining partner contact
+p_qual_contact <- partner_qual %>%
+  # Repeat the filters
+  filter(!is.na(PARTNER_CONTACT_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship" &
+         !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))) %>%
+  select(PARTNER_CONTACT_TECH, PARTNER_CONTACT_QUAL) %>%
+  mutate(
+    # Talking and speaking assumed to have occurred face-to-face
+    together = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                                 regex("same house|liv.+togeth|we.+togeth|face to|speak|talking|verbal|liv.+with|in person|home|everywhere|see each|we live|contact|both in the flat|present|relax together|in the house|constantly together", ignore_case = TRUE)),
+      1, 0
+    ),
+    text = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                  regex("text", ignore_case = TRUE)),
+      1, 0
+    ),
+    video = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                              regex("video|facetim|Skype", ignore_case = TRUE)),
+      1, 0
+    ),
+    phonecall = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                                  regex("(?<!video) call|phone", ignore_case = TRUE)),
+      1, 0
+    ),
+    social_media = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                                     regex("WhatsApp|messenger|social media|snapchat|internet", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Communication patterns have remained the same
+    normal = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                               regex("normal|no change|usual|same (?!house)", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Technology mentioned but not specified 
+    misc_tech = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                                  regex("virtual|not physical|technology", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Cope with or circumvent social distancing guidelines 
+    soc_dist = ifelse(str_detect(PARTNER_CONTACT_QUAL,
+                                 regex("break.+rule|drive way|still see|visit|dinner|spending time|quality time", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+p_qual_contact
+
+# Create an other category
+p_qual_contact_1 <- p_qual_contact %>%
+  filter(
+    together != 1 &
+    text != 1 &
+    video != 1 &
+    phonecall != 1 &
+    social_media != 1 &
+    normal != 1 &
+    misc_tech != 1 &
+    soc_dist != 1
+  ) %>%
+  select(PARTNER_CONTACT_QUAL) %>%
+  # Assign to theme
+  mutate(theme = rep("other", nrow(.))) %>%
+  count(theme) %>%
+  mutate(percent = (n / nrow(p_qual_contact) * 100))
+p_qual_contact_1
+
+# Calculate theme frequencies
+p_qual_contact %>%
+  select(-starts_with("PARTNER")) %>%
+  gather(key = "theme", value = "occurrence") %>%
+  # Drop non-occurrence
+  filter(occurrence != 0) %>%
+  count(theme) %>%
+  mutate(percent = (n / nrow(p_qual_contact) * 100)) %>%
+  rbind(p_qual_contact_1) %>%
+  arrange(desc(n))
+
+# Select example themes
+example <- p_qual_contact %>%
+  filter(misc_tech == 1)
+View(example)
 
 # NLP - RELATIONSHIP_TECH -------------------------------------------------
 
-# How has technology impacted on your relationship?
+# How has technology impacted your relationship?
+#######
+
+# How many provided description
+partner_qual %>%
+  select(RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+  filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  nrow(.)
+
+# Classify the descriptions
+p_qual_tech <- partner_qual %>%
+  select(RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+  filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  mutate(
+    # No impact perceived
+    none = ifelse(str_detect(RELATIONSHIP_TECH,
+                             regex("not much|no impact|not impact|no$|no effect|not at all|haven|it hasn|hasn't$|none|has not|no change|nope|no influen|same$|don't feel like|nil|not sign|nothing sign|not massiv|not subst|didn't.+impact|imposs|don't.+impact|hasn't made|hasn't impact|not had.+impact|^hasn't|about the same", ignore_case = TRUE)),
+      1, 0
+    ),
+    # General positive impact
+    positive = ifelse(str_detect(RELATIONSHIP_TECH,
+                                 regex("great|good|helped|positive|improve|very useful|helpful", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Not application for whatever reason
+    not_app = ifelse(str_detect(RELATIONSHIP_TECH,
+                                regex("^not app|N/A|^na", ignore_case = TRUE)),
+      1, 0
+    ),
+    # No use of technology, either in general or due to living together---less importance
+    no_use = ifelse(str_detect(RELATIONSHIP_TECH,
+                               regex("don't use|unnecessary|no need|negli|live together|together all|together more|home together|liv.+together|always together|same place|same build", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Technology enables the relationship to persist despite physical distance
+    continuity = ifelse(str_detect(RELATIONSHIP_TECH,
+                                   regex("keep.+alive|stay in|stay.+con|ke.+con|keep.+touch|talk to|contact|in touch|together yet|allow|see.+less|watch.+together|kept things|distanc|talk.+more|chat.+more|saver|see each|more open|call.+more|chat.+often|intimacy from afar", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Participants estimate the magnitude of the impact
+    est_impact = ifelse(str_detect(RELATIONSHIP_TECH,
+                                   regex("somewhat|little|a lot|very much", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Necessary and easy
+    depend = ifelse(str_detect(RELATIONSHIP_TECH,
+                               regex("depend|eas|on it all|rely.+on|only way|survive|without tech|together without", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Technology as a distraction or source of disagreement
+    dist_disa = ifelse(str_detect(RELATIONSHIP_TECH,
+                                 regex("distract|calls more often|paying att|fall outs|escape|on his phone|talk.+less|speak less|less time on soc|too much time|tensio|phones more than|excuse|not present", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+  p_qual_tech
+
+# Create an other category
+p_qual_tech_1 <- p_qual_tech %>%
+  filter(
+    none != 1 &
+    positive != 1 &
+    not_app != 1 &
+    no_use != 1 &
+    continuity != 1 &
+    est_impact != 1 &
+    depend != 1 &
+    dist_disa != 1
+  ) %>%
+  select(RELATIONSHIP_TECH) %>%
+  mutate(theme = rep("other", nrow(.))) %>%
+  count(theme) %>%
+  mutate(percent = (n / nrow(p_qual_tech)) * 100)
+p_qual_tech_1
+
+# Calculate frequency of themes
+p_qual_tech %>%
+  select(-starts_with("RELATIO")) %>%
+  gather(key = "theme", value = "occurrence") %>%
+  filter(occurrence != 0) %>%
+  count(theme) %>%
+  mutate(percent = (n / nrow(p_qual_tech)) * 100) %>%
+  rbind(p_qual_tech_1) %>%
+  arrange(desc(n))
+
+# Select example themes
+example <- p_qual_tech %>%
+  filter(depend == 1)
+View(example)
 
 # NLP - RELATIONSHIP_QUAL -------------------------------------------------
 
 # In your own words, please explain how the current COVID-19 pandemic and social lockdown 
 # has affected your intimate relationship(s), both positively and negatively:
+#######
+
+# Number who provided a narrative
+partner_qual %>%
+  filter(!is.na(RELATIONSHIP_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  select(RELATIONSHIP_QUAL) %>%
+  nrow(.)
