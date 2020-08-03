@@ -199,26 +199,26 @@ p_qual_online_1 <- p_qual_online %>%
     meet != 1 &
     love != 1
   ) %>%
-  # Assign to a theme
+  # Assign to a category
   mutate(other = rep(1, nrow(.))) %>%
   # Prepare to join with other data frame
   group_by(ONLINE_CHANGE) %>%
   count(other) %>%
   ungroup() %>%
   mutate(percent = n / nrow(p_qual_online),
-         theme = rep("other", 2)) %>%
-  select(ONLINE_CHANGE, theme, everything(), -other)
+         category = rep("other", 2)) %>%
+  select(ONLINE_CHANGE, category, everything(), -other)
 p_qual_online_1
 
-# Themes by increase or decrease
+# categorys by increase or decrease
 p_qual_online %>%
   select(-ONLINE_QUAL) %>%
-  gather(key = "theme", value = "occurrence", -ONLINE_CHANGE) %>%
-  # Remove zeros because the theme was not present
+  gather(key = "category", value = "occurrence", -ONLINE_CHANGE) %>%
+  # Remove zeros because the category was not present
   filter(occurrence != 0) %>%
   group_by(ONLINE_CHANGE) %>%
-  # How often did the theme occur by group
-  count(theme) %>%
+  # How often did the category occur by group
+  count(category) %>%
   mutate(percent = (n / nrow(p_qual_online)) * 100) %>%
   ungroup() %>%
   rbind(p_qual_online_1) %>%
@@ -300,24 +300,24 @@ p_qual_contact_1 <- p_qual_contact %>%
     soc_dist != 1
   ) %>%
   select(PARTNER_CONTACT_QUAL) %>%
-  # Assign to theme
-  mutate(theme = rep("other", nrow(.))) %>%
-  count(theme) %>%
+  # Assign to category
+  mutate(category = rep("other", nrow(.))) %>%
+  count(category) %>%
   mutate(percent = (n / nrow(p_qual_contact) * 100))
 p_qual_contact_1
 
-# Calculate theme frequencies
+# Calculate category frequencies
 p_qual_contact %>%
   select(-starts_with("PARTNER")) %>%
-  gather(key = "theme", value = "occurrence") %>%
+  gather(key = "category", value = "occurrence") %>%
   # Drop non-occurrence
   filter(occurrence != 0) %>%
-  count(theme) %>%
+  count(category) %>%
   mutate(percent = (n / nrow(p_qual_contact) * 100)) %>%
   rbind(p_qual_contact_1) %>%
   arrange(desc(n))
 
-# Select example themes
+# Select example categorys
 example <- p_qual_contact %>%
   filter(misc_tech == 1)
 View(example)
@@ -379,7 +379,7 @@ p_qual_tech <- partner_qual %>%
       1, 0
     )
   )
-  p_qual_tech
+p_qual_tech
 
 # Create an other category
 p_qual_tech_1 <- p_qual_tech %>%
@@ -394,22 +394,22 @@ p_qual_tech_1 <- p_qual_tech %>%
     dist_disa != 1
   ) %>%
   select(RELATIONSHIP_TECH) %>%
-  mutate(theme = rep("other", nrow(.))) %>%
-  count(theme) %>%
+  mutate(category = rep("other", nrow(.))) %>%
+  count(category) %>%
   mutate(percent = (n / nrow(p_qual_tech)) * 100)
 p_qual_tech_1
 
-# Calculate frequency of themes
+# Calculate frequency of categorys
 p_qual_tech %>%
   select(-starts_with("RELATIO")) %>%
-  gather(key = "theme", value = "occurrence") %>%
+  gather(key = "category", value = "occurrence") %>%
   filter(occurrence != 0) %>%
-  count(theme) %>%
+  count(category) %>%
   mutate(percent = (n / nrow(p_qual_tech)) * 100) %>%
   rbind(p_qual_tech_1) %>%
   arrange(desc(n))
 
-# Select example themes
+# Select example categorys
 example <- p_qual_tech %>%
   filter(depend == 1)
 View(example)
@@ -425,3 +425,90 @@ partner_qual %>%
   filter(!is.na(RELATIONSHIP_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
   select(RELATIONSHIP_QUAL) %>%
   nrow(.)
+
+# Percent who provided a narrative
+339 / sum(partner_qual$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
+
+# Generate categories
+p_qual_relation <- partner_qual %>%
+  # Remove missing values and participants who are single or casually dating
+  filter(!is.na(RELATIONSHIP_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  select(ID, RELATIONSHIP_QUAL) %>%
+  # Create categories from keywords
+  mutate(
+    # No change
+    none = ifelse(str_detect(RELATIONSHIP_QUAL,
+                             regex("hasn.+change|not too much|no impact|not.+change|unaff|not effe|doesnt imp|dont.+change|everything.+same|no issu|don't think.+has|don't.+change|allways|same$|it hasn't|hasn't.+affect|hasn't.+effect|no affec|no effec|no change|isnt at the|much the same|remain.+same|hasn't im|same as it would|minimal imp|same as prev", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Less "intimate," which participants used to refer to sex
+    less_intim = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                   regex("less.+intima|intimate less|less due to|haven't.+intim|less physic|no physic|not.+physica|lack.+physic|no intim|no.+sex|less sex|reduc.+intim|unable.+intim|not.+intim|sleeping in diff|crave that intim|lack of energy|limits.+sex", ignore_case = TRUE)),
+      1, 0
+    ),
+    # More time together perceived as enhancing the affective dimension 
+    deeper_bond = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                    regex("affection|more time.+together|closer|bond|more intim|happy|rely on.+other|energy for inti|enjoy|more together|intercourse every|more sex|team|talk more|intim more|strong we are|support|isolation togeth|spend.+time|spend a lot|talk to.+longer|connect more|intimate more|seeing my partner more|more time with.+partner|each other more|move in with|live together$|more time.+each other|depth|now we are|more avail|stronger|valuable time|spend together|more quality|time to spend|see each other|now living|see more of him|living with.+now|have eachother", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Problems with boundaries or work-life balance---together/working too much
+    boundary = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                 regex("argu|boundar|work.+balanc|tens|strain|need.+break|fight|less excit|frustrat|lack.+space|no alone|not.+time.+myself|tired|more space than|less priva|not really quality time|little boy|clean more|living with pare|rowing|lack of energy", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Less contact with partner
+    less_con = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                 regex("see.+less|not.+see|stagnate|long.+apart|see.+in person|unable.+see|home less|missing human|disinteres|cannot do act|haven't.+see|lonely|stay in touch|miss being with|miss each other|can't.+see each other|don't.+see each other|can't live toget|cannit|stopped me from|painful.+apart", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Greater negative arousal
+    neg_arousal = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                    regex("anxi|(?<!de-)stress|depress|more distant|worr|feel.+down|mundane|angry|lethargic|irrita", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Generally positive and other category
+    other = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                     regex("positively$|50|less with friends", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Recreational coping
+    rec_cope = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                 regex("gaming|work on me|organis|do more things|consider what I want|more time.+son|new hobb", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Someone in the relationship is a key worker
+    key_worker = ifelse(str_detect(RELATIONSHIP_QUAL,
+                                   regex("key worker|keyworker|disinfect and take", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+p_qual_relation
+
+# Check categorization
+p_qual_relation_1 <- p_qual_relation %>%
+  filter(
+    none != 1 &
+    less_intim != 1 &
+    key_worker != 1 &
+    other != 1 &
+    deeper_bond != 1 &
+    boundary != 1 &
+    less_con != 1 &
+    neg_arousal != 1 &
+    rec_cope != 1
+  )
+p_qual_relation_1
+
+# Calculate category frequencies
+p_qual_relation %>%
+  select(-c(ID, RELATIONSHIP_QUAL)) %>%
+  gather(key = "category", value = "occurrence") %>%
+  filter(occurrence != 0) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(p_qual_relation)) * 100) %>%
+  arrange(desc(n))
+
+# Select example categorys
+example <- p_qual_relation %>%
+  filter(deeper_bond == 1)
+View(example)
