@@ -443,7 +443,7 @@ p_qual_relation <- partner_qual %>%
     ),
     # Less "intimate," which participants used to refer to sex
     less_intim = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                   regex("less.+intima|intimate less|less due to|haven't.+intim|less physic|no physic|not.+physica|lack.+physic|no intim|no.+sex|less sex|reduc.+intim|unable.+intim|not.+intim|sleeping in diff|crave that intim|lack of energy|limits.+sex", ignore_case = TRUE)),
+                                   regex("less.+intima|intimate less|less due to|haven't.+intim|less physic|no physic|not.+physica|lack.+physic|no intim|no.+sex|less sex|reduc.+intim|unable.+intim|not (?!really).+intimate|not intimate|sleeping in diff|crave that intim|lack of energy|limits.+sex", ignore_case = TRUE)),
       1, 0
     ),
     # More time together perceived as enhancing the affective dimension 
@@ -458,27 +458,22 @@ p_qual_relation <- partner_qual %>%
     ),
     # Less contact with partner
     less_con = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                 regex("see.+less|not.+see|stagnate|long.+apart|see.+in person|unable.+see|home less|missing human|disinteres|cannot do act|haven't.+see|lonely|stay in touch|miss being with|miss each other|can't.+see each other|don't.+see each other|can't live toget|cannit|stopped me from|painful.+apart", ignore_case = TRUE)),
+                                 regex("see.+less|not.+see|stagnate|long.+apart|see.+in person|unable.+see|home less|missing human|disinteres|cannot do act|haven't.+seen (?!much impact)|lonely|stay in touch|miss being with|miss each other|can't.+see each other|don't.+see each other|can't live toget|cannit|stopped me from|painful.+apart", ignore_case = TRUE)),
       1, 0
     ),
     # Greater negative arousal
     neg_arousal = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                    regex("anxi|(?<!de-)stress|depress|more distant|worr|feel.+down|mundane|angry|lethargic|irrita", ignore_case = TRUE)),
+                                    regex("anxi|(?<!de-)stress|depress|more distant|worr|feel.+down|mundane|angry|prolonged periods|irrita", ignore_case = TRUE)),
       1, 0
     ),
     # Generally positive and other category
     other = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                     regex("positively$|50|less with friends", ignore_case = TRUE)),
+                                     regex("positively$|50|less with friends|key worker|keyworker|disinfect and take", ignore_case = TRUE)),
       1, 0
     ),
     # Recreational coping
     rec_cope = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                 regex("gaming|work on me|organis|do more things|consider what I want|more time.+son|new hobb", ignore_case = TRUE)),
-      1, 0
-    ),
-    # Someone in the relationship is a key worker
-    key_worker = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                   regex("key worker|keyworker|disinfect and take", ignore_case = TRUE)),
+                                 regex("gaming|work on me|organis|do more things|consider what I want|my son|new hobb", ignore_case = TRUE)),
       1, 0
     )
   )
@@ -489,7 +484,6 @@ p_qual_relation_1 <- p_qual_relation %>%
   filter(
     none != 1 &
     less_intim != 1 &
-    key_worker != 1 &
     other != 1 &
     deeper_bond != 1 &
     boundary != 1 &
@@ -510,5 +504,14 @@ p_qual_relation %>%
 
 # Select example categorys
 example <- p_qual_relation %>%
-  filter(deeper_bond == 1)
+  filter(other == 1)
 View(example)
+
+# Basic demographics of block quotes
+survey %>%
+  select(ID, AGE, ETHNIC, GENDER) %>%
+  filter(ID %in% c(551, 16, 391, 228))
+
+# Percent who mentioned being a key worker
+sum(str_detect(p_qual_relation$RELATIONSHIP_QUAL, 
+               regex("key worker|keyworker|disinfect", ignore_case = TRUE))) / nrow(p_qual_relation)

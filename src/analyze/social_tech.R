@@ -118,10 +118,6 @@ soctech_label %>%
   count() %>%
   mutate(percent = n / 565)
 
-# Likert-type items
-# - SOCTECH_USEFUL
-# - SOCTECH_IMPRESSION
-
 # NLP - SOCTECH_TRANSITION ------------------------------------------------
 
 # If you used SNS more, please describe the transition in moving from communication in-person to online?
