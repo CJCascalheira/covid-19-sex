@@ -1,4 +1,5 @@
 # Dependencies
+library(ltm)
 library(tidyverse)
 
 # Import
@@ -63,6 +64,14 @@ SDI <- measures %>%
     SDI_SCORE = sum(raw_scores)
   )
 SDI
+
+# Select all the SDI-2 items
+SDI_items <- measures %>%
+  select(starts_with("SDI"))
+SDI_items
+
+# Cronbach's alpha for SDI-2
+cronbach.alpha(SDI_items)
 
 # SCORING - LONE V3 -------------------------------------------------------
 

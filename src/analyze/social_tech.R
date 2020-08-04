@@ -12,6 +12,11 @@ soctech <- survey %>%
   select(-ends_with("QUAL")) %>%
   select(-c("SOCTECH_TRANSITION"))
 
+# Select qualitative variables to analyze
+soctech_qual <- survey %>%
+  select(ID, starts_with("SOCTECH")) %>%
+  select(ID, ends_with(c("TRANSITION", "QUAL")))
+
 # Label all the values
 soctech_label <- within(soctech, {
   SOCTECH_CURENT <- recode(as.character(SOCTECH_CURENT), "0" = "No", "1" = "Yes")
@@ -118,22 +123,111 @@ soctech_label %>%
   count() %>%
   mutate(percent = n / 565)
 
-# NLP - SOCTECH_TRANSITION ------------------------------------------------
-
-# If you used SNS more, please describe the transition in moving from communication in-person to online?
-
 # NLP - SOCTECH_SIGNUP_QUAL -----------------------------------------------
 
 # If you signed up for new SNS, which platforms have you signed up to?
+#######
+
+# Number of participants answering the question
+soctech_qual %>%
+  select(SOCTECH_SIGNUP_QUAL) %>%
+  filter(!is.na(SOCTECH_SIGNUP_QUAL))
+
+# Percent of new accounts
+platforms <- soctech_qual %>%
+  select(SOCTECH_SIGNUP_QUAL) %>%
+  filter(!is.na(SOCTECH_SIGNUP_QUAL)) %>%
+  mutate(
+    tiktok = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                               regex("tiktok", ignore_case = TRUE)),
+      1, 0
+    ),
+    snap = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                             regex("snap", ignore_case = TRUE)),
+      1, 0
+    ),
+    zoom = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                             regex("zoom", ignore_case = TRUE)),
+      1, 0
+    ),
+    houseparty = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                                   regex("house", ignore_case = TRUE)),
+      1, 0
+    ),
+    discord = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                                regex("disco", ignore_case = TRUE)),
+      1, 0
+    ),
+    face_insta = ifelse(str_detect(SOCTECH_SIGNUP_QUAL,
+                                   regex("face|insta", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+platforms
+
+# Create other category
+platforms_other <- platforms %>%
+  filter(
+    tiktok != 1 &
+    snap != 1 &
+    zoom != 1 &
+    houseparty != 1 &
+    discord != 1 &
+    face_insta != 1
+  )  %>%
+  select(SOCTECH_SIGNUP_QUAL) %>%
+  mutate(other = rep(1, nrow(.))) %>%
+  count(other) %>%
+  select(n) %>%
+  mutate(platform = "other")
+platforms_other
+
+# Combine dataframes
+platforms %>%
+  select(-SOCTECH_SIGNUP_QUAL) %>%
+  gather(key = "platform", value = "occurrence") %>%
+  filter(occurrence == 1) %>%
+  count(platform) %>%
+  rbind(platforms_other) %>%
+  mutate(percent = (n / nrow(platforms)) * 100) %>%
+  arrange(desc(n))
 
 # NLP - SOCTECH_USEFUL_QUAL -----------------------------------------------
 
 # If SNS has been useful during social isolation, how have they been useful?
+#######
 
-# NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
-
-# How have you used SNS to keep up to date with the latest news?
+# Number of participants answering the question
+soctech_qual %>%
+  select(SOCTECH_USEFUL_QUAL) %>%
+  filter(!is.na(SOCTECH_USEFUL_QUAL))
 
 # NLP - SOCTECH_IMPRESSION_QUAL -------------------------------------------
 
 # Please explain your impression of SNS during social lockdown?
+#######
+
+# Number of participants answering the question
+soctech_qual %>%
+  select(SOCTECH_IMPRESSION_QUAL) %>%
+  filter(!is.na(SOCTECH_IMPRESSION_QUAL))
+
+# NLP - SOCTECH_TRANSITION ------------------------------------------------
+
+# If you used SNS more, please describe the transition in moving from communication in-person to online?
+#######
+
+# Number of participants answering the question
+soctech_qual %>%
+  select(SOCTECH_TRANSITION) %>%
+  filter(!is.na(SOCTECH_TRANSITION))
+
+# NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
+
+# How have you used SNS to keep up to date with the latest news?
+#######
+
+# Number of participants answering the question
+soctech_qual %>%
+  select(SOCTECH_NEWS_QUAL) %>%
+  filter(!is.na(SOCTECH_NEWS_QUAL))
