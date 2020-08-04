@@ -197,10 +197,75 @@ platforms %>%
 # If SNS has been useful during social isolation, how have they been useful?
 #######
 
-# Number of participants answering the question
-soctech_qual %>%
+# Categorize the open-ended data
+s_qual_useful <- soctech_qual %>%
   select(SOCTECH_USEFUL_QUAL) %>%
-  filter(!is.na(SOCTECH_USEFUL_QUAL))
+  filter(!is.na(SOCTECH_USEFUL_QUAL)) %>%
+  mutate(
+    # Useful because it allows people to stay in touch
+    contact = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                                regex("in (touch|contact)|connect|communicat|contact.+(friend|family|people|mother)|^keep.+(friend|family|people)|friend|family|loved one|contact others|incontact|continue contact|relatives|talk to.+people|cannot see", ignore_case = TRUE)),
+      1, 0
+    ),
+    # useful because it is a distraction / relaxation method during the pandemic
+    entertain = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                                  regex("distra|busy|engag|occupi|relax|entertain|pass.+time|bor|kill.+time|wasting time|use of time|free time|extra time", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Useful to find out about COVID-19
+    covid = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                              regex("covid|lockdown|corona|pandemic|scien|virus|id-19|government", ignore_case = TRUE)),
+      1, 0 
+    ),
+    # A response with no depth, such as none or yes
+    none = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                             regex("none|haven't|yes|n/a|1|2|3|-|na$", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Participants only listed a social media platform
+    soc_media = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                                  regex("snapchat$|gram$|facebook$|twitter$|tiktok$|reddit$", ignore_case = TRUE)),
+      1, 0
+    ),
+    # General news, unspecified to COVID-19
+    news = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
+                             regex("news$", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+s_qual_useful
+
+# Create possible other category
+other <- s_qual_useful %>%
+  filter(
+    contact != 1 &
+    entertain != 1 &
+    covid != 1 &
+    none != 1 &
+    soc_media != 1 &
+    news != 1
+  )
+other
+View(other)
+
+# Determine which news items remain
+# Will not parse with regex, unnecessary because the category will not be in the top three
+other %>% 
+  filter(str_detect(SOCTECH_USEFUL_QUAL, regex("news", ignore_case = TRUE)))
+
+# Calculate frequencies
+s_qual_useful %>%
+  select(-SOCTECH_USEFUL_QUAL) %>%
+  gather(key = "category", value = "occurrence") %>%
+  # Keep only positive occurrences 
+  filter(occurrence == 1) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(s_qual_useful)) * 100) %>%
+  # Report the top three, minus the category none, which was a catch-all for poor quality responses
+  arrange(desc(n))
+
+# Number of people who explained why social media was useful
+nrow(s_qual_useful)
 
 # NLP - SOCTECH_IMPRESSION_QUAL -------------------------------------------
 
