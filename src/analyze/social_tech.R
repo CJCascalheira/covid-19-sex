@@ -236,7 +236,7 @@ s_qual_useful <- soctech_qual %>%
 s_qual_useful
 
 # Create possible other category
-other <- s_qual_useful %>%
+other_use <- s_qual_useful %>%
   filter(
     contact != 1 &
     entertain != 1 &
@@ -245,12 +245,12 @@ other <- s_qual_useful %>%
     soc_media != 1 &
     news != 1
   )
-other
-View(other)
+other_use
+View(other_use)
 
 # Determine which news items remain
 # Will not parse with regex, unnecessary because the category will not be in the top three
-other %>% 
+other_use %>% 
   filter(str_detect(SOCTECH_USEFUL_QUAL, regex("news", ignore_case = TRUE)))
 
 # Calculate frequencies
@@ -272,10 +272,95 @@ nrow(s_qual_useful)
 # Please explain your impression of SNS during social lockdown?
 #######
 
-# Number of participants answering the question
-soctech_qual %>%
+# Modified conventional content analysis to categorize impressions
+s_qual_impression <- soctech_qual %>%
   select(SOCTECH_IMPRESSION_QUAL) %>%
-  filter(!is.na(SOCTECH_IMPRESSION_QUAL))
+  filter(!is.na(SOCTECH_IMPRESSION_QUAL)) %>%
+  mutate(
+    # Positive because keeping in contact
+    contact = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                regex("in (touch|contact)|connect|communicat|contact.+(friend|family|people|mother)|^keep.+(friend|family|people)|friend|family|loved one|contact others|incontact|continue contact|relatives|talk to.+people|cannot see|social contact|active social|isolated", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive distraction / relaxation method during the pandemic
+    entertain = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                  regex("distra|busy|engag|occupi|relax|entertain|pass.+time|bor|kill.+time|wasting time|use of time|free time|extra time|something to do|alle.+anxiety", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive because they are useful
+    useful = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                               regex("useful", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive due to humor
+    humor = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                              regex("fun|humor|laugh", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive due to informed
+    inform = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                               regex("(?<!mis)inform|up to date|follow.+news|recent changes", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive because great and good
+    gg = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                           regex("good|great", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Positive because of coming together in the face of COVID-19
+    unity = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                              regex("come together|go.+through.+same", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Ambivalent
+    ambiv = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                              regex("good.+bad|positive.+nega|better.+worse|not.+opinion|neutral|50|don't.+opinion|don't always believe", ignore_case = TRUE)),
+      1, 0
+    ),
+    # No change in impressions
+    none = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                             regex("much different|don't.+use|don't.+change|same to me|not.+change|not effec", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Negative due to misinformation
+    fake = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                             regex("misinformation|fake|incorrect|innac|propaga|untrue|not.+accur|false", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Negative because content is negative
+    neg_content = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                    regex("(bad|negative|scary) news|rubbish|complain|negative about|entirely coronavirus|negative opinion|increase.+nega|negative (affect|effect)|(affect|effect).+ negative|hateful|used neg|censor|scare mong|negative things", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+s_qual_impression
+
+# Possible other category
+other_imp <- s_qual_impression %>%
+  filter(
+    contact != 1 &
+    entertain != 1 &
+    useful != 1 &
+    humor != 1 &
+    inform != 1 &
+    gg != 1 &
+    unity != 1 &
+    ambiv != 1 &
+    none != 1 &
+    fake != 1 &
+    neg_content != 1
+  )
+other_imp
+View(other_imp)
+
+# Calculate frequencies
+s_qual_impression %>%
+  select(-SOCTECH_IMPRESSION_QUAL) %>%
+  gather(key = "category", value = "occurrence") %>%
+  filter(occurrence == 1) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(s_qual_impression)) * 100) %>%
+  arrange(desc(n))
 
 # NLP - SOCTECH_TRANSITION ------------------------------------------------
 
