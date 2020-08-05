@@ -396,9 +396,96 @@ s_qual_impression %>%
 #######
 
 # Number of participants answering the question
-soctech_qual %>%
+s_qual_transit <- soctech_qual %>%
   select(SOCTECH_TRANSITION) %>%
-  filter(!is.na(SOCTECH_TRANSITION))
+  # Remove missing values
+  filter(!is.na(SOCTECH_TRANSITION)) %>%
+  # Remove participants who stated that they did not use SNS more
+  filter(!str_detect(SOCTECH_TRANSITION,
+                    regex("NA.$|na$|n/a|dont$|less$|(no|not) more|not applicable", ignore_case = TRUE)))
+
+# Percent answering the question
+nrow(s_qual_transit_1) / nrow(soctech_qual)
+
+# Categorize responses
+s_qual_transit_1 <- s_qual_transit %>%
+  # Generate categories
+  mutate(
+    # The transition was easy or was not perceived as a change
+    easy = ifelse(str_detect(SOCTECH_TRANSITION,
+                             regex("easy$|not difficult$|fine$|used to it|easy transition$|hasn't change|haven.+notic|simple|not.+difficult$|hasn.+struggle|same really|easy.+(familiar|same)|used.+(anyway|already)|(already|always) (using|used)|(already|always|familiar).+online|feel the same|not.+different|same as.+always|(pretty|fairly) natural|natural transition|(pretty|quite|relatively) easy|(easier|smooth) transition|a lot.+tech|very organic|stay.+(similar|same)|always have|lots anyways|not easy|always prefer|no.+transi|not.+drastic|(no|not much).+(change|transition)|seamless|transition.+very easy|wasn't.+hard|no.+issues|online anyway|used.+before|hasn't been too|time.+before.+lockdown
+", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Transition was difficult in general
+    difficult = ifelse(str_detect(SOCTECH_TRANSITION,
+                                  regex("difficult.+used to|negative.+overall|hard.$|wasnt easy|more effort|harder|^difficult|been (hard|difficult)|i struggle|difficult (toget|to reach)|quite hard", ignore_case = TRUE)),
+      1, 0 
+    ),
+    # Misses the face-to-face interaction
+    miss = ifelse(str_detect(SOCTECH_TRANSITION,
+                             regex("face to face|face-to-face|less engag|quality.+decrease|prefer.+(physical|in person|person)|less natural|(can't|miss).+hug|miss seeing|flow less|not.+(smooth|personal)|dont like|less connect|see in-person|not.+(seeing|intimate)|miss.+(connec|them)|lack.+physical|takes away|cant be done|doesn't replace|want to meet|see.+more.+in person|empty|thoughtless|taxing", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Difficult due to unsettling---strange, awkward, jarring
+    unsettle = ifelse(str_detect(SOCTECH_TRANSITION,
+                                 regex("strange|awkward|jarring|weird|odd", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Describes how they connect with others
+    describe = ifelse(str_detect(SOCTECH_TRANSITION,
+                                 regex("called more|houseparty|zoom|whatsapp|facetime|face time|text.+more|more.+text|video (call|chat)|instant messaging|rely on text|use technology|facetiming|Facebook|family online|90|online now|communic.+online|group call|email|camera|good platform|skype|(schedule|regular) call|discord|messaging app|only (way|thing)|set.+people.+device", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Different experience, but fun and interesting
+    enjoy = ifelse(str_detect(SOCTECH_TRANSITION,
+                              regex("fun|enjoy|interesting|easier|reconnect with|now.+love|netflix part|quiz|feel.+closer", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Novel experiences not available usually
+    new = ifelse(str_detect(SOCTECH_TRANSITION,
+                            regex("usually wouldn't|not normally|more time|more frequent|more confiden|celebrate birthdays|weekly (sessions|catch)|set times.+each other", ignore_case = TRUE)),
+      1, 0
+    )
+  )
+s_qual_transit_1
+
+# Possible other category
+transit_other <- s_qual_transit_1 %>%
+  filter(
+    easy != 1 &
+    difficult != 1 &
+    miss != 1 &
+    unsettle != 1 &
+    describe != 1 &
+    enjoy != 1 &
+    new != 1
+  ) %>%
+  # There has been enough categorization to lump the rest into an other category
+  # because the percent of responses will be less than 10% (i.e., less representative)
+  select(SOCTECH_TRANSITION) %>%
+  mutate(category = rep("other", nrow(.))) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(s_qual_transit)) * 100)
+transit_other
+View(transit_other)
+
+# Calculate frequencies
+s_qual_transit_1 %>%
+  select(-SOCTECH_TRANSITION) %>%
+  gather(key = "category", value = "occurrence") %>%
+  filter(occurrence == 1) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(s_qual_transit)) * 100) %>%
+  rbind(transit_other) %>%
+  arrange(desc(n))
+
+# Check for nuances in categories by entering the name of the category into
+# the following code, iteratively, and then scanning responses to ensure
+# proper categorization
+example <- s_qual_transit %>%
+  filter(miss == 1)
+View(example)
 
 # NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
 
