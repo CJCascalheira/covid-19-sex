@@ -214,7 +214,7 @@ s_qual_useful <- soctech_qual %>%
     ),
     # Useful to find out about COVID-19
     covid = ifelse(str_detect(SOCTECH_USEFUL_QUAL,
-                              regex("covid|lockdown|corona|pandemic|scien|virus|id-19|government", ignore_case = TRUE)),
+                              regex("covid|lockdown|corona|pandemic|scien|virus|id-19", ignore_case = TRUE)),
       1, 0 
     ),
     # A response with no depth, such as none or yes
@@ -279,22 +279,22 @@ s_qual_impression <- soctech_qual %>%
   mutate(
     # Positive because keeping in contact
     contact = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                                regex("in (touch|contact)|connect|communicat|contact.+(friend|family|people|mother)|^keep.+(friend|family|people)|friend|family|loved one|contact others|incontact|continue contact|relatives|talk to.+people|cannot see|social contact|active social|isolated", ignore_case = TRUE)),
+                                regex("in (touch|contact)|connect|communicat|contact.+(friend|family|people|mother)|^keep.+(friend|family|people)|friend|family|loved one|contact others|incontact|continue contact|relatives|talk to.+people|cannot see|social contact|active social|isolated|people up to|messaging|interact|message people|talk.+each other|less.+lone|maintain rela|still helps|people.+up to|social aspect.+add|stay together", ignore_case = TRUE)),
       1, 0
     ),
     # Positive distraction / relaxation method during the pandemic
     entertain = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                                  regex("distra|busy|engag|occupi|relax|entertain|pass.+time|bor|kill.+time|wasting time|use of time|free time|extra time|something to do|alle.+anxiety", ignore_case = TRUE)),
+                                  regex("distra|busy|engag|occupi|relax|entertain|pass.+time|bor|kill.+time|wasting time|use of time|free time|extra time|something to do|alle.+anxiety|remove.+mono|escape", ignore_case = TRUE)),
       1, 0
     ),
     # Positive because they are useful
     useful = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                               regex("useful", ignore_case = TRUE)),
+                               regex("useful|learn", ignore_case = TRUE)),
       1, 0
     ),
     # Positive due to humor
     humor = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                              regex("fun|humor|laugh", ignore_case = TRUE)),
+                              regex("fun|humor|laugh|positive things|positivity|happy", ignore_case = TRUE)),
       1, 0
     ),
     # Positive due to informed
@@ -304,32 +304,52 @@ s_qual_impression <- soctech_qual %>%
     ),
     # Positive because great and good
     gg = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                           regex("good|great", ignore_case = TRUE)),
+                           regex("good|great|more positive|fan of|no neg|not misle|lot.+positive|10000|generally pos", ignore_case = TRUE)),
       1, 0
     ),
     # Positive because of coming together in the face of COVID-19
     unity = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                              regex("come together|go.+through.+same", ignore_case = TRUE)),
+                              regex("come together|go.+through.+same|people.+together|spread.+support|support.+other|act.+kind|people.+support|hero|stick.+together|less alone|more together|key worker|same boat|camara|encourag|as me|offer.+help", ignore_case = TRUE)),
       1, 0
     ),
     # Ambivalent
     ambiv = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                              regex("good.+bad|positive.+nega|better.+worse|not.+opinion|neutral|50|don't.+opinion|don't always believe", ignore_case = TRUE)),
+                              regex("ambiv|good.+bad|positive.+nega|better.+worse|not.+opinion|neutral|50|don't.+opinion|don't always believe|^unsure|extremes$|usual mix|bad.+posi", ignore_case = TRUE)),
       1, 0
     ),
     # No change in impressions
     none = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                             regex("much different|don't.+use|don't.+change|same to me|not.+change|not effec", ignore_case = TRUE)),
+                             regex("much different|don't.+use|don't.+change|same to me|not.+change|not effec|not.+use.+social|opinion.+same|not.+bad|not sure|no real change|same.+as before|hasn.+change|the same$|any diff|same routine|norma|about the same", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Undifferentiated negative
+    undiff_neg = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                   regex("void|too much$|more down", ignore_case = TRUE)),
       1, 0
     ),
     # Negative due to misinformation
     fake = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                             regex("misinformation|fake|incorrect|innac|propaga|untrue|not.+accur|false", ignore_case = TRUE)),
+                             regex("misinformation|fake|incorrect|innac|propaga|untrue|not.+accur|false|believe what|not.+trust|conspir|warrior|stories aren.+true|sensationa|exagg.+media", ignore_case = TRUE)),
       1, 0
     ),
     # Negative because content is negative
     neg_content = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
-                                    regex("(bad|negative|scary) news|rubbish|complain|negative about|entirely coronavirus|negative opinion|increase.+nega|negative (affect|effect)|(affect|effect).+ negative|hateful|used neg|censor|scare mong|negative things", ignore_case = TRUE)),
+                                    regex("(bad|negative|scary) news|negative content|rubbish|complain|negative about|entirely coronavirus|negative opinion|increase.+nega|negative (affect|effect)|(affect|effect).+ negative|hateful|used neg|censor|scare mong|negative things|show off|negative posts|bad things|negative online|use.+negative|not a lot.+positive|yell at|people.+horrible|feel bad|nonsense post|blame|ads|very neg|stupid opin|outrage|nasti|negative.+people|have an opin|stupid things", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Negative due to COVID-19 
+    covid = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                              regex("rules.+breaking|break.+rule|covid.+worr|negat.+covid|anxi.+news|saturated", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Negative because of the structure of social media
+    soc_structure = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                      regex("never.+amazing|time well spent|forever caught|be better$|snapshot|looking.+other.+doing|outdo|leave face|others.+motiva|social media.+unhelpful|sucked in|addict|competi", ignore_case = TRUE)),
+      1, 0
+    ),
+    # Negative due to government
+    gov = ifelse(str_detect(SOCTECH_IMPRESSION_QUAL,
+                                       regex("gover|politi|government.+fail", ignore_case = TRUE)),
       1, 0
     )
   )
@@ -347,11 +367,18 @@ other_imp <- s_qual_impression %>%
     unity != 1 &
     ambiv != 1 &
     none != 1 &
+    undiff_neg != 1 &
     fake != 1 &
-    neg_content != 1
-  )
+    neg_content != 1 &
+    covid != 1 &
+    soc_structure != 1 &
+    gov != 1
+  ) %>%
+  select(SOCTECH_IMPRESSION_QUAL) %>%
+  mutate(category = rep("other", nrow(.))) %>%
+  count(category) %>%
+  mutate(percent = (n / nrow(s_qual_impression)) * 100)
 other_imp
-View(other_imp)
 
 # Calculate frequencies
 s_qual_impression %>%
@@ -360,6 +387,7 @@ s_qual_impression %>%
   filter(occurrence == 1) %>%
   count(category) %>%
   mutate(percent = (n / nrow(s_qual_impression)) * 100) %>%
+  rbind(other_imp) %>%
   arrange(desc(n))
 
 # NLP - SOCTECH_TRANSITION ------------------------------------------------
@@ -378,6 +406,10 @@ soctech_qual %>%
 #######
 
 # Number of participants answering the question
-soctech_qual %>%
+s_qual_news <- soctech_qual %>%
   select(SOCTECH_NEWS_QUAL) %>%
   filter(!is.na(SOCTECH_NEWS_QUAL))
+View(s_qual_news)
+
+# Based on a scan of the responses, it does not appear that this variable
+# will fit with the manuscript
