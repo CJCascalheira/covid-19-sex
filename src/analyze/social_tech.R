@@ -413,8 +413,7 @@ s_qual_transit_1 <- s_qual_transit %>%
   mutate(
     # The transition was easy or was not perceived as a change
     easy = ifelse(str_detect(SOCTECH_TRANSITION,
-                             regex("easy$|not difficult$|fine$|used to it|easy transition$|hasn't change|haven.+notic|simple|not.+difficult$|hasn.+struggle|same really|easy.+(familiar|same)|used.+(anyway|already)|(already|always) (using|used)|(already|always|familiar).+online|feel the same|not.+different|same as.+always|(pretty|fairly) natural|natural transition|(pretty|quite|relatively) easy|(easier|smooth) transition|a lot.+tech|very organic|stay.+(similar|same)|always have|lots anyways|not easy|always prefer|no.+transi|not.+drastic|(no|not much).+(change|transition)|seamless|transition.+very easy|wasn't.+hard|no.+issues|online anyway|used.+before|hasn't been too|time.+before.+lockdown
-", ignore_case = TRUE)),
+                             regex("easy$|not difficult$|fine$|used to it|easy transition$|hasn't change|haven.+notic|simple|not.+difficult$|hasn.+struggle|same really|easy.+(familiar|same)|used.+(anyway|already)|(already|always) (using|used)|(already|always|familiar).+online|feel the same|not.+different|same as.+always|(pretty|fairly) natural|natural transition|(pretty|quite|relatively) easy|(easier|smooth) transition|a lot.+tech|very organic|stay.+(similar|same)|always have|lots anyways|not easy|always prefer|no.+transi|not.+drastic|(no|not much).+(change|transition)|seamless|transition.+very easy|wasn't.+hard|no.+issues|online anyway|used.+before|hasn't been too|time.+before.+lockdown", ignore_case = TRUE)),
       1, 0
     ),
     # Transition was difficult in general
@@ -483,8 +482,8 @@ s_qual_transit_1 %>%
 # Check for nuances in categories by entering the name of the category into
 # the following code, iteratively, and then scanning responses to ensure
 # proper categorization
-example <- s_qual_transit %>%
-  filter(miss == 1)
+example <- s_qual_transit_1 %>%
+  filter(easy == 1)
 View(example)
 
 # NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
