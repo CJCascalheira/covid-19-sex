@@ -228,13 +228,8 @@ sqrt(
 # Post-hoc pairwise comparisons
 chisq.posthoc.test(sex_act_living, method = "bonferroni")
 
-# Significant comparisons - Children or Family
-sex_act_living[1, 1] / (sex_act_living[1, 1] + sex_act_living[1, 2])
-sex_act_living[1, 2] / (sex_act_living[1, 1] + sex_act_living[1, 2])
-
-# Significant comparisons - Partner
-sex_act_living[4, 1] / (sex_act_living[4, 1] + sex_act_living[4, 2])
-sex_act_living[4, 2] / (sex_act_living[4, 1] + sex_act_living[4, 2])
+# Observed frequencies of the table
+prop.table(sex_act_living)
 
 #######
 # Relationship status and sexual fantasizing
@@ -258,6 +253,9 @@ sqrt(
 
 # Post-hoc pairwise comparisons
 chisq.posthoc.test(sex_act_relation, method = "bonferroni")
+
+# Observed frequencies of the table
+prop.table(sex_act_relation)
 
 #######
 # Prepare data for test of significant increases in sexual activity over all

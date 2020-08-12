@@ -483,7 +483,7 @@ s_qual_transit_1 %>%
 # the following code, iteratively, and then scanning responses to ensure
 # proper categorization
 example <- s_qual_transit_1 %>%
-  filter(easy == 1)
+  filter(miss == 1)
 View(example)
 
 # NLP - SOCTECH_NEWS_QUAL -------------------------------------------------
