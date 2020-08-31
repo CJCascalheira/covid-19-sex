@@ -344,6 +344,15 @@ sex_act_4_rs %>%
   group_by(RELATIONSHIP_STATUS) %>%
   count()
 
+# KS test
+sa4rs_serious <- sex_act_4_rs %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship")
+
+sa4rs_casual <- sex_act_4_rs %>%
+  filter(RELATIONSHIP_STATUS == "Single or Casual")
+
+ks.test(sa4rs_serious$n, sa4rs_casual$n)
+
 # Homogeneity of variance
 leveneTest(n ~ RELATIONSHIP_STATUS, data = sex_act_4_rs)
 
