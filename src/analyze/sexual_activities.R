@@ -231,6 +231,28 @@ chisq.posthoc.test(sex_act_living, method = "bonferroni")
 # Observed frequencies of the table
 prop.table(sex_act_living)
 
+# Observed and expected counts
+sal_chisq$observed
+sal_chisq$expected
+
+# Cell chi-square 
+for (i in 1:5) {
+  x <- ((sal_chisq$observed[i,][2] - sal_chisq$expected[i,][2])^2) / sal_chisq$expected[i,][2]
+  print(x)
+  
+  y <- ((sal_chisq$observed[i,][1] - sal_chisq$expected[i,][1])^2) / sal_chisq$expected[i,][1]
+  print(y)
+}
+
+# Relative contribution
+for (i in 1:5) {
+  x <- (((sal_chisq$observed[i,][2] - sal_chisq$expected[i,][2])^2) / (sal_chisq$expected[i,][2] * sal_chisq$statistic)) * 100
+  print(x)
+  
+  y <- (((sal_chisq$observed[i,][1] - sal_chisq$expected[i,][1])^2) / (sal_chisq$expected[i,][1] * sal_chisq$statistic)) * 100
+  print(y)
+}
+
 #######
 # Relationship status and sexual fantasizing
 #######
