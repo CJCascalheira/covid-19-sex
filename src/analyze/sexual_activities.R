@@ -280,6 +280,81 @@ chisq.posthoc.test(sex_act_relation, method = "bonferroni")
 prop.table(sex_act_relation)
 
 #######
+# Increases in solo sexual practices
+#######
+
+# Prepare the data frame
+sex_act_1 <- sex_act %>%
+  select(-SA_STARTED_FANTASIZING) %>%
+  mutate(increased = rep(0, 565)) %>%
+  select(ID, increased, everything())
+sex_act_1
+
+# Overall people endorsing solo sexual activity
+sum(!is.na(sex_act_1$SA_SOLOMASTURBATION))
+sum(!is.na(sex_act_1$SA_SEXTOYSSOLO))
+sum(!is.na(sex_act_1$SA_WATCHPORNSOLO))
+
+# Recode all NA values
+sex_act_2 <- sex_act_1 %>%
+  # Remove partnered sexual practices
+  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, increased,
+         SA_SOLOMASTURBATION, SA_SEXTOYSSOLO, SA_WATCHPORNSOLO) %>%
+  mutate_at(vars(SA_SOLOMASTURBATION, SA_SEXTOYSSOLO, SA_WATCHPORNSOLO),
+            function(x) ifelse(
+              is.na(x), "none", x
+            )
+  )
+sex_act_2
+
+# Participants who reported a solo sexual activity
+sex_act_solo <- sex_act_2 %>%
+  gather(key = variable, value = engaged, 
+         -c(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, increased)) %>%
+  # Tally the increases
+  mutate(increased = ifelse(
+    str_detect(engaged, regex("^*more", ignore_case = TRUE)), 
+    increased + 1, increased + 0
+  )) 
+sex_act_solo
+
+# Increases in all three solor sexual activites
+sex_act_3 <- sex_act_solo %>%
+  group_by(ID) %>%
+  count(increased) %>%
+  filter(increased == 1) %>%
+  ungroup()
+sex_act_3
+
+# Percent of participants reporting at least one solo sexual practice
+nrow(sex_act_3) / 565
+
+# Percent reporting two solo sexual practices
+sex_act_3 %>%
+  filter(n == 2) %>%
+  nrow() / 565
+
+# Percent reporting all three sexual practices
+sex_act_3 %>%
+  filter(n == 3) %>%
+  nrow() / 565
+
+# Percent of solo masturbation increase
+sex_act_solo %>%
+  filter(variable == "SA_SOLOMASTURBATION" & increased == 1) %>%
+  nrow() / 565
+
+# Percent of solo sex toy increase
+sex_act_solo %>%
+  filter(variable == "SA_SEXTOYSSOLO" & increased == 1) %>%
+  nrow() / 565
+
+# Percent of watching porn alone increase
+sex_act_solo %>%
+  filter(variable == "SA_WATCHPORNSOLO" & increased == 1) %>%
+  nrow() / 565
+
+#######
 # Prepare data for test of significant increases in sexual activity over all
 #######
 
@@ -292,18 +367,20 @@ sex_act_1
 
 # Recode all NA values
 sex_act_2 <- sex_act_1 %>%
-  mutate_at(vars(SA_SOLOMASTURBATION, SA_MUTUALMASTURBATION, SA_INTERCOURSEWITHPARTNER,
-                 SA_INTERCOURSEWITHNONPARTNER, SA_SEXTOYSSOLO, SA_SEXTOYSWITHPARTNER,
-                 SA_WATCHPORNSOLO, SA_WATCHPORNWITHPARTNER, SA_SEXTEDWITHPARTNER,
-                 SA_SEXTEDWITHNONPARTNER, SA_SENTNUDESTOPARTNER, SA_SENTNUDESTONONPARTNER,
-                 SA_ROLEPLAYPARTNER, SA_ROLEPLAYNONPARTNER),
+  mutate_at(vars(SA_SOLOMASTURBATION, SA_MUTUALMASTURBATION,
+                 SA_INTERCOURSEWITHPARTNER, SA_INTERCOURSEWITHNONPARTNER,
+                 SA_SEXTOYSSOLO, SA_SEXTOYSWITHPARTNER, SA_WATCHPORNSOLO,
+                 SA_WATCHPORNWITHPARTNER, SA_SEXTEDWITHPARTNER,
+                 SA_SEXTEDWITHNONPARTNER, SA_SENTNUDESTOPARTNER,
+                 SA_SENTNUDESTONONPARTNER, SA_ROLEPLAYPARTNER,
+                 SA_ROLEPLAYNONPARTNER),
     function(x) ifelse(
       is.na(x), "none", x
     )
   )
 sex_act_2
 
-# Participants who reported a sexual activity
+# Participants who reported an increase in sexual activities
 sex_act_3 <- sex_act_2 %>%
   gather(key = variable, value = engaged, 
          -c(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, increased)) %>%
@@ -318,7 +395,7 @@ sex_act_3 <- sex_act_2 %>%
   ungroup()
 sex_act_3
 
-# Percent of participants reporting more sexual activity
+# Percent of participants reporting increases in sexual activities
 nrow(sex_act_3) / 565
 
 # Reconstruct the data frame w/ participants who reported no increases plus 
@@ -443,7 +520,7 @@ one_way
 # Summarize the model
 summary(one_way)
 
-# WHY FANTASIES CHANGES ---------------------------------------------------
+# WHY FANTASIES CHANGE ---------------------------------------------------
 
 # Prepare data frame
 sa_qual <- survey %>%
