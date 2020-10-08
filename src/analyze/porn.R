@@ -9,7 +9,7 @@ survey <- read_csv("data/covid_sex_tech.csv")
 # Just the porn variables
 porn <- survey %>%
   # Select porn variables
-  select(starts_with("PORN")) %>%
+  select(ID, starts_with("PORN")) %>%
   # Remove open text variables
   select(-ends_with("QUAL"))
 
