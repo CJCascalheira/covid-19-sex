@@ -1,5 +1,6 @@
 # Dependencies
 library(tidyverse)
+library(chisq.posthoc.test)
 
 # Import
 survey <- read_csv("data/covid_sex_tech.csv")
@@ -56,5 +57,81 @@ solo_1
 
 # CONTINGENCY TABLE ANALYSES ----------------------------------------------
 
+#######
+# Sexual Fantasy Associations
+#######
 
-table(solo_1$SA_STARTED_FANTASIZING, solo_1$porn_alone)
+#######
+# Are increases in sexual fantasizing associated with increases in masturbation?
+#######
+fan_increase_mastur <- table(solo_1$SA_STARTED_FANTASIZING, solo_1$increase_masturbate)
+fan_increase_mastur
+
+# Number of missing values
+nrow(solo_1) - sum(fan_increase_mastur)
+
+# Execute chi-square test of independence
+chisq_fim <- chisq.test(fan_increase_mastur)
+chisq_fim
+
+# Effect size - Cramer's V
+sqrt(
+  chisq_fim$statistic[[1]] / (sum(fan_increase_mastur) * (2 - 1))
+)
+
+# Post-hoc pairwise comparisons
+chisq.posthoc.test(fan_increase_mastur, method = "bonferroni")
+
+# Observed and expected counts
+chisq_fim$observed
+chisq_fim$expected
+
+#######
+# Are increases in sexual fantasizing associated with increases in solo porn use?
+#######
+fan_increase_porn <- table(solo_1$SA_STARTED_FANTASIZING, solo_1$increase_solo_porn)
+fan_increase_porn
+
+# Number of missing values
+nrow(solo_1) - sum(fan_increase_porn)
+
+# Execute chi-square test of independence
+chisq_fip <- chisq.test(fan_increase_porn)
+chisq_fip
+
+# Effect size - Cramer's V
+sqrt(
+  chisq_fip$statistic[[1]] / (sum(fan_increase_porn) * (2 - 1))
+)
+
+# Post-hoc pairwise comparisons
+chisq.posthoc.test(fan_increase_porn, method = "bonferroni")
+
+# Observed and expected counts
+chisq_fip$observed
+chisq_fip$expected
+
+#######
+# Are increases in soliatory porn consumption associated with increased masturbation?
+#######
+solo_porn_mastur <- table(solo_1$increase_solo_porn, solo_1$increase_masturbate)
+solo_porn_mastur
+
+# Number of missing values
+nrow(solo_1) - sum(solo_porn_mastur)
+
+# Execute chi-square test of independence
+chisq_spm <- chisq.test(solo_porn_mastur)
+chisq_spm
+
+# Effect size - Cramer's V
+sqrt(
+  chisq_spm$statistic[[1]] / (sum(solo_porn_mastur) * (2 - 1))
+)
+
+# Post-hoc pairwise comparisons
+chisq.posthoc.test(solo_porn_mastur, method = "bonferroni")
+
+# Observed and expected counts
+chisq_spm$observed
+chisq_spm$expected
