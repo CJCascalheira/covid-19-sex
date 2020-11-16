@@ -10,7 +10,7 @@ survey <- read_csv("data/covid_sex_tech.csv")
 
 # Select the main variables
 sex_act <- survey %>%
-  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, starts_with("SA")) %>%
+  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, GENDER, starts_with("SA")) %>%
   select(-ends_with("QUAL"))
 
 # Split the values across variables
@@ -34,6 +34,12 @@ within(sex_act, {
   group_by(SA_STARTED_FANTASIZING) %>%
   count() %>%
   mutate(percent = n / 565)
+
+# Gender of started fantasizing
+sex_act %>%
+  filter(SA_STARTED_FANTASIZING == 1) %>%
+  count(GENDER) %>%
+  mutate(percent = n / 194)
 
 #######
 # Frequencies of sexual activities
@@ -318,7 +324,7 @@ sex_act_solo <- sex_act_2 %>%
   )) 
 sex_act_solo
 
-# Increases in all three solor sexual activites
+# Increases in all three solo sexual activities
 sex_act_3 <- sex_act_solo %>%
   group_by(ID) %>%
   count(increased) %>%
@@ -338,6 +344,11 @@ sex_act_3 %>%
 sex_act_3 %>%
   filter(n == 3) %>%
   nrow() / 565
+
+# Gender break down of solo sexual activities
+semi_join(sex_act, sex_act_3, by = "ID") %>%
+  count(GENDER) %>%
+  mutate(percent = n / 172)
 
 # Percent of solo masturbation increase
 sex_act_solo %>%

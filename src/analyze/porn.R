@@ -9,7 +9,7 @@ survey <- read_csv("data/covid_sex_tech.csv")
 # Just the porn variables
 porn <- survey %>%
   # Select porn variables
-  select(ID, starts_with("PORN")) %>%
+  select(ID, GENDER, starts_with("PORN")) %>%
   # Remove open text variables
   select(-ends_with("QUAL"))
 
@@ -66,7 +66,7 @@ porn_which_break_1
 #######
 
 # Identify nots, don'ts, nevers
-porn_other <- porn[c(4, 5)] %>%
+porn_other <- porn[c(5, 6)] %>%
   filter(PORN_CHANGE_WHICH == "Other (please specify)") %>%
   group_by(PORN_CHANGE_OTHER) %>%
   count() %>%
@@ -175,6 +175,12 @@ porn_label %>%
   count() %>%
   filter(PORN_PARTNER_KNOW != "N/A") %>%
   mutate(percent = n / (87 + 174))
+
+# Gender break down of partner knowing about porn use
+porn_label %>%
+  filter(PORN_PARTNER_KNOW == "No") %>%
+  count(GENDER) %>%
+  mutate(percent = n / 87)
 
 # Number of participants who had a partner and watched porn
 (87 + 174)
