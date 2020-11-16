@@ -80,6 +80,16 @@ survey_2 %>%
   arrange(desc(count)) %>%
   as.data.frame()
 
+# Percent sexual orientation
+survey_2 %>%
+  mutate(SEX_ORIENT = recode(SEX_ORIENT, "Pansexual" = "Bisexual")) %>%
+  group_by(SEX_ORIENT) %>%
+  summarize(count = n(),
+            percent = count / nrow(survey_2)) %>%
+  arrange(desc(count)) %>%
+  as.data.frame() %>%
+  as_tibble()
+
 # Percent country
 survey_2 %>%
   group_by(COUNTRY) %>%

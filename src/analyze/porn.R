@@ -66,7 +66,7 @@ porn_which_break_1
 #######
 
 # Identify nots, don'ts, nevers
-porn_other <- porn[c(3, 4)] %>%
+porn_other <- porn[c(4, 5)] %>%
   filter(PORN_CHANGE_WHICH == "Other (please specify)") %>%
   group_by(PORN_CHANGE_OTHER) %>%
   count() %>%
