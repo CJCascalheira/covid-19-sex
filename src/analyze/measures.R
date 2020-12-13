@@ -7,7 +7,7 @@ survey <- read_csv("data/covid_sex_tech.csv")
 
 # Select measures
 measures <- survey %>%
-  select(ID, starts_with(c("SDI_during_", "LONEV3_", "MPSS_")), -ends_with(c("items", "total")))
+  select(ID, starts_with(c("SDI_during_", "LONEV3_", "MPSS_", "sociosexuality", "SOI")), -ends_with(c("items", "total")))
 measures
 
 # Percent of values missing
@@ -50,6 +50,53 @@ for (i in 1:length(measures)) {
 measures %>%
   gather(key = "column", value = "row") %>%
   filter(is.na(row))
+
+# SELECT - SOI-R -----------------------------------------------------------
+
+# SOI-R total score
+SOIR <- measures %>%
+  select("ID", "SOIR" = "Sociosexuality")
+SOIR
+
+# Prepare facets
+facets <- measures %>%
+  select(ID, starts_with("SOI")) %>%
+  gather(key = "items", value = "raw_scores", -ID)
+facets
+
+# Behavior items 1-3
+facets_b <- facets %>%
+  filter(items %in% c("SOIR_1", "SOIR_2", "SOIR_3")) %>%
+  group_by(ID) %>%
+  summarize(
+    SOIR_behavior = sum(raw_scores)
+  )
+facets_b
+
+# Attitude items 4-6
+facets_a <- facets %>%
+  filter(items %in% c("SOIR_4", "SOIR_5", "SOIR_6")) %>%
+  group_by(ID) %>%
+  summarize(
+    SOIR_attitude = sum(raw_scores)
+  )
+facets_a
+
+# Desire items 7-9
+facets_d <- facets %>%
+  filter(items %in% c("SOIR_7", "SOIR_8", "SOIR_9")) %>%
+  group_by(ID) %>%
+  summarize(
+    SOIR_desire = sum(raw_scores)
+  )
+facets_d
+
+# Combine SOIR scores
+SOIR_1 <- SOIR %>%
+  left_join(facets_b) %>%
+  left_join(facets_a) %>%
+  left_join(facets_d)
+SOIR_1
 
 # SCORING - SDI -----------------------------------------------------------
 
@@ -106,9 +153,21 @@ MSPSS
 
 # Join the data frames
 total_measures <- SDI %>%
-  left_join(LONEV3, by = "ID") %>%
-  left_join(MSPSS, by = "ID")
+  left_join(SOIR_1, by = "ID")
 total_measures
 
+# Calculate M and SD
+total_measures_1 <- total_measures %>%
+  select(-ID) %>%
+  gather(key = "scale", value = "score") %>%
+  group_by(scale) %>%
+  summarize(
+    M = mean(score),
+    SD = sd(score),
+    MIN = min(score),
+    MAX = max(score)
+  )
+total_measures_1
+
 # Save the total scores as CSV
-write_csv(total_measures, path = "data/total_measures.csv")
+write_csv(total_measures, path = "data/total_measures_1.csv")

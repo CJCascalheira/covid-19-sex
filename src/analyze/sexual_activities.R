@@ -15,7 +15,7 @@ sex_act <- survey %>%
 
 # Split the values across variables
 sex_act_list <- sex_act %>%
-  select(-ends_with("ING"), -RELATIONSHIP_STATUS) %>%
+  select(-ends_with("ING"), -RELATIONSHIP_STATUS, -GENDER) %>%
   map(str_split, ",") %>%
   as_tibble()
 sex_act_list
@@ -72,7 +72,7 @@ sa_list
 # CHI-SQUARE OMNIBUS -------------------------------------------------------
 
 # Chi-square for sexual activities probably inappropriate for within subject 
-# variables, so consult
+# variables, so do not use
 
 #######
 # Chi-square test of independence - prepare
