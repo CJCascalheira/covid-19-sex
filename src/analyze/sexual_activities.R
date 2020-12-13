@@ -10,7 +10,7 @@ survey <- read_csv("data/covid_sex_tech.csv")
 
 # Select the main variables
 sex_act <- survey %>%
-  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, GENDER, starts_with("SA")) %>%
+  select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, GENDER, SEX_ORIENT, starts_with("SA")) %>%
   select(-ends_with("QUAL"))
 
 # Split the values across variables
@@ -418,7 +418,7 @@ sex_act_4 <- sex_act_2 %>%
   rbind(sex_act_3) %>%
   full_join(
     sex_act_2 %>%
-      select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING)
+      select(ID, RELATIONSHIP_STATUS, CURRENT_LIVING, GENDER, SEX_ORIENT)
   ) %>%
   select(-increased)
 sex_act_4
@@ -530,6 +530,119 @@ one_way
 
 # Summarize the model
 summary(one_way)
+
+# COMPARE MEANS - GENDER --------------------------------------------------
+
+# Remove NA values
+sex_act_4_gender <- sex_act_4 %>%
+  filter(GENDER %in% c("Woman", "Man"))
+sex_act_4_gender
+
+# Describe increases in activities by gender
+sex_act_4_gender %>%
+  group_by(GENDER) %>%
+  summarize(
+    M = mean(n),
+    SD = sd(n)
+  )
+
+#######
+# Assumptions
+#######
+
+# Are the distributions normal or at least symmetrical?
+ggplot(sex_act_4_gender, aes(x = n)) +
+  geom_histogram() +
+  facet_grid(~ GENDER)
+
+# Sample is not approximately equal in size for each group, but is greater than 25 per group
+sex_act_4_gender %>%
+  group_by(GENDER) %>%
+  count()
+
+# KS test
+sa4g_woman <- sex_act_4_gender %>%
+  filter(GENDER == "Woman")
+
+sa4g_man <- sex_act_4_gender %>%
+  filter(GENDER == "Man")
+
+ks.test(sa4g_woman$n, sa4g_man$n)
+
+# Homogeneity of variance
+leveneTest(n ~ GENDER, data = sex_act_4_gender)
+
+#######
+# Independent t-test
+#######
+
+# Run the t-test
+g_t_test <- t.test(n ~ GENDER, data = sex_act_4_gender, var.equal = FALSE)
+g_t_test
+
+# Effect size = Cohen's d
+g_t_test$statistic * sqrt(
+  (339 + 221) / (339 * 221)
+)
+
+# COMPARE MEANS - SEXUAL ORIENTATION -------------------------------------
+
+# Remove NA values
+sex_act_4_so <- sex_act_4 %>%
+  filter(!is.na(SEX_ORIENT)) %>%
+  mutate(
+    SEX_ORIENT = recode(SEX_ORIENT, "Bisexual" = "A_LGB", "Homosexual" = "A_LGB", 
+                        "Mostly Heterosexual" = "A_LGB", "Mostly Homosexual" = "A_LGB",
+                        "Pansexual" = "A_LGB")
+  )
+sex_act_4_so
+
+# Describe increases in activities by sexual orientation
+sex_act_4_so %>%
+  group_by(SEX_ORIENT) %>%
+  summarize(
+    M = mean(n),
+    SD = sd(n)
+  )
+
+#######
+# Assumptions
+#######
+
+# Are the distributions normal or at least symmetrical?
+ggplot(sex_act_4_so, aes(x = n)) +
+  geom_histogram() +
+  facet_grid(~ SEX_ORIENT)
+
+# Sample is not approximately equal in size for each group, but is greater than 25 per group
+sex_act_4_so %>%
+  group_by(SEX_ORIENT) %>%
+  count()
+
+# KS test
+sa4so_hetero <- sex_act_4_so %>%
+  filter(SEX_ORIENT == "Heterosexual")
+
+sa4so_lgb <- sex_act_4_so %>%
+  filter(SEX_ORIENT == "A_LGB")
+
+ks.test(sa4so_hetero$n, sa4so_lgb$n)
+
+# Homogeneity of variance
+leveneTest(n ~ SEX_ORIENT, data = sex_act_4_so)
+
+#######
+# Independent t-test
+#######
+
+# Run the t-test
+so_t_test <- t.test(n ~ SEX_ORIENT, data = sex_act_4_so, var.equal = FALSE)
+so_t_test
+
+# Effect size = Cohen's d
+so_t_test$statistic * sqrt(
+  (446 + 119) / (446 * 119)
+)
 
 # WHY FANTASIES CHANGE ---------------------------------------------------
 
