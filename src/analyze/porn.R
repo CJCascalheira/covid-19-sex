@@ -50,6 +50,50 @@ porn_break_vector <- str_replace(porn_which_break$value, "[\"]", "")
 # Add clean vector to data frame
 porn_which_break$selection <- porn_break_vector_1
 
+####### GENDER
+
+# Gender differences in porn viewing increases
+pg_increase <- porn_label %>%
+  filter(PORN_CHANGE_LOCKDOWN == "Increased") %>%
+  count(GENDER) %>%
+  mutate(
+    percent = (n / sum(n)) * 100,
+    total = sum(n)
+  ) %>%
+  arrange(desc(n))
+pg_increase
+
+# Fisher exact probability test
+prop.test(pg_increase[1:2, ]$n, pg_increase[1:2, ]$total, alternative = "two.sided", correct = FALSE)
+
+# Gender differences in porn viewing decreases
+pg_decrease <- porn_label %>%
+  filter(PORN_CHANGE_LOCKDOWN == "Decreased") %>%
+  count(GENDER) %>%
+  mutate(
+    percent = (n / sum(n)) * 100,
+    total = sum(n)
+  ) %>%
+  arrange(desc(n))
+pg_decrease
+
+# Fisher exact probability test
+prop.test(pg_decrease$n, pg_decrease$total, alternative = "two.sided", correct = FALSE)
+
+# Gender difference in concealing pornography use
+pg_know <- porn_label %>%
+  filter(PORN_PARTNER_KNOW == "No") %>%
+  count(GENDER) %>%
+  mutate(
+    percent = n / sum(n),
+    total = sum(n)
+  ) %>%
+  filter(GENDER %in% c("Man", "Woman"))
+pg_know
+
+# Fisher exact probability test
+prop.test(pg_know$n, pg_know$total, alternative = "two.sided", correct = FALSE)
+
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
 # Describe PORN_CHANGE_WHICH

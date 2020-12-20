@@ -15,7 +15,7 @@ sex_act <- survey %>%
 
 # Split the values across variables
 sex_act_list <- sex_act %>%
-  select(-ends_with("ING"), -RELATIONSHIP_STATUS, -GENDER) %>%
+  select(-ends_with("ING"), -RELATIONSHIP_STATUS, -GENDER, -SEX_ORIENT) %>%
   map(str_split, ",") %>%
   as_tibble()
 sex_act_list
@@ -35,11 +35,19 @@ within(sex_act, {
   count() %>%
   mutate(percent = n / 565)
 
+####### GENDER
+
 # Gender of started fantasizing
-sex_act %>%
+fantasy_gender <- sex_act %>%
   filter(SA_STARTED_FANTASIZING == 1) %>%
   count(GENDER) %>%
-  mutate(percent = n / 194)
+  mutate(percent = n / 194, total = sum(n)) %>%
+  filter(GENDER %in% c("Man", "Woman")) %>%
+  arrange(desc(n))
+fantasy_gender
+
+# Fisher exact probability test
+prop.test(fantasy_gender$n, fantasy_gender$total, alternative = "two.sided", correct = FALSE)
 
 #######
 # Frequencies of sexual activities
@@ -345,10 +353,19 @@ sex_act_3 %>%
   filter(n == 3) %>%
   nrow() / 565
 
+####### GENDER 
+
 # Gender break down of solo sexual activities
-semi_join(sex_act, sex_act_3, by = "ID") %>%
+solo_sex_gender <- semi_join(sex_act, sex_act_3, by = "ID") %>%
   count(GENDER) %>%
-  mutate(percent = n / 172)
+  mutate(percent = n / 172, total = sum(n)) %>%
+  arrange(desc(n))
+solo_sex_gender
+
+# Fisher exact probability test
+prop.test(solo_sex_gender[1:2, ]$n, solo_sex_gender[1:2, ]$total, alternative = "two.sided", correct = FALSE)
+
+#######
 
 # Percent of solo masturbation increase
 sex_act_solo %>%
