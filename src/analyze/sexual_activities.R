@@ -77,14 +77,7 @@ names(sa_list) <- names(sex_act_list)
 # Ignore NA because NA is a product of the operation
 sa_list
 
-# CHI-SQUARE OMNIBUS -------------------------------------------------------
-
-# Chi-square for sexual activities probably inappropriate for within subject 
-# variables, so do not use
-
-#######
-# Chi-square test of independence - prepare
-#######
+# SEXUAL ACTIVITY TABLE -------------------------------------------------------
 
 # Create temporary tibble
 b <- as_tibble(sa_list)
@@ -141,77 +134,6 @@ sa_chi_table_1 %>%
   rownames_to_column() %>%
   as_tibble() %>%
   arrange(desc(before))
-
-#######
-# Chi-square test of independence - omnibus execute
-#######
-
-# Omnibus frequencies
-sa_chi_table_1 %>%
-  as_tibble() %>%
-  summarize(
-    total_b = sum(before),
-    total_d = sum(during),
-    total_l = sum(less),
-    total_m = sum(more),
-    grand = total_b + total_d + total_l + total_m
-  ) %>%
-  gather(key = totals, value = number) %>%
-  # Add column percent
-  mutate(col_percent = number / 5945) %>%
-  # Add pooled percent
-  mutate(pool_percent = number / (565 * 14))
-
-# Calculate the omnibus chi-square test for before vs. during across sexual activities
-chisq_sa_engaged <- chisq.test(sa_chi_table_1[-c(3:5)])
-chisq_sa_engaged
-
-# Total participants
-totals_engaged <- chisq_sa_engaged$observed %>%
-  as_tibble() %>%
-  summarize(
-    total_before = sum(before),
-    total_during = sum(during),
-    grand = total_before + total_during
-  )
-totals_engaged
-
-# Effect size - Cramer's V
-sqrt(
-  chisq_sa_engaged$statistic[[1]] / (totals_engaged$grand * (2 - 1))
-)
-
-# Calculate the omnibus chi-square test for less vs. more across sexual activities
-chisq_sa_change <- chisq.test(sa_chi_table_1[-c(1, 2, 5)])
-chisq_sa_change
-
-# Total participants
-totals_change <- chisq_sa_change$observed %>%
-  as_tibble() %>%
-  summarize(
-    total_less = sum(less),
-    total_more = sum(more),
-    grand = total_less + total_more
-  )
-totals_change
-
-# Effect size - Cramer's V
-sqrt(
-  chisq_sa_change$statistic[[1]] / (totals_change$grand * (2 - 1))
-)
-
-# Visualize chi-square table
-sa_chi_table_1 %>%
-  rownames_to_column() %>%
-  as_tibble() %>%
-  gather(key = engagement, value = value, -rowname) %>%
-  ggplot(aes(x = engagement, y = rowname)) +
-    geom_point(aes(size = value), shape = 21, colour = "black", fill = "skyblue") + 
-    theme(
-      panel.background = element_blank(), 
-      panel.border = element_rect(colour = "blue", fill = NA, size = 1)
-    ) +
-  scale_size_area(max_size = 20)
 
 # INCREASES IN SEXUAL ACTIVITIES ------------------------------------------
 
@@ -439,6 +361,31 @@ sex_act_4 <- sex_act_2 %>%
   ) %>%
   select(-increased)
 sex_act_4
+
+# MASTURBATION VS. INTERCOURSE --------------------------------------------
+
+# Select the variables of interest
+mast_inter <- sex_act_2 %>%
+  select(SA_SOLOMASTURBATION, SA_INTERCOURSEWITHPARTNER) %>%
+  mutate(
+    increased_intercourse = rep(0, 565),
+    increased_solo_mast = rep(0, 565)
+  ) %>%
+  # Calculate increased sexual activity
+  mutate(
+    increased_intercourse = if_else(str_detect(SA_INTERCOURSEWITHPARTNER, 
+                                               regex("more", ignore_case = TRUE)), 1, 0),
+    increased_solo_mast = if_else(str_detect(SA_SOLOMASTURBATION,
+                                             regex("more", ignore_case = TRUE)), 1, 0)
+  ) %>%
+  select(starts_with("incre"))
+mast_inter
+
+# See contingency table
+table(mast_inter)
+
+# Chi-square test of independence 
+chisq.test(table(mast_inter))
 
 # COMPARE MEANS - RELATIONSHIP STATUS -------------------------------------
 

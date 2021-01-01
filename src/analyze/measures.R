@@ -120,6 +120,20 @@ SDI_items
 # Cronbach's alpha for SDI-2
 cronbach.alpha(SDI_items)
 
+# SDI pre and during lockdown
+survey %>%
+  select(SDI_pre_total, SDI_during_total) %>%
+  summarize(
+   pre_m = mean(SDI_pre_total),
+   pre_sd = sd(SDI_pre_total),
+   pre_min = min(SDI_pre_total),
+   pre_max = max(SDI_pre_total),
+   during_m = mean(SDI_during_total),
+   during_sd = sd(SDI_during_total),
+   during_min = min(SDI_during_total),
+   during_max = max(SDI_during_total)
+  )
+
 # SCORING - LONE V3 -------------------------------------------------------
 
 # Total LONEV3 score from 20 items
