@@ -1,15 +1,40 @@
 # Dependencies
 library(tidyverse)
+library(foreign)
 
 # Import
 survey <- read_csv("data/covid_sex_tech.csv")
 total_measures <- read_csv("data/total_measures.csv")
+original <- read.spss("data/raw/Data565.sav", to.data.frame = TRUE)
+
+# Names original data frame
+names(original)
+
+# Prepare the original data frame
+original_1 <- as_tibble(original) %>%
+  # Add record ID for joining
+  mutate(ID = 1:nrow(original)) %>%
+  select(
+    ID,
+    Howlonghaveyoubeeninyourcurrentrelationshippleaseanswerinmonths,
+    Howhassociallockdownimpactedontheamountoftimeyouspentwithyourpar,
+    Wereyoulivingwithyourpartnerpreviously,
+    Areyoucurrentlylivingwithyourpartners
+  ) %>%
+  # Rename variables
+  rename(
+    WITH_PARTNER_MONTHS = Howlonghaveyoubeeninyourcurrentrelationshippleaseanswerinmonths,
+    IMPACT_TIME_PARTNER = Howhassociallockdownimpactedontheamountoftimeyouspentwithyourpar,
+    LIVING_BEFORE_LOCKDOWN = Wereyoulivingwithyourpartnerpreviously,
+    LIVE_W_PARTNER = Areyoucurrentlylivingwithyourpartners
+  )
+original_1
 
 # CLEAN PARTNER ONLINE VARIABLES ------------------------------------------
 
 # Select primary variables
 partner_online <- survey %>%
-  select(ID, starts_with(c("PARTNER", "ONLINE")), RELATIONSHIP_STATUS) %>%
+  select(ID, starts_with(c("PARTNER", "ONLINE")), RELATIONSHIP_STATUS, CURRENT_LIVING) %>%
   select(-ends_with(c("QUAL"))) 
 
 # Label all of the values across variables
@@ -28,7 +53,44 @@ partner_qual <- survey %>%
   left_join(partner_online_label, by = "ID")
 partner_qual
 
+# Combine two data frames
+partners_time <- left_join(partner_online_label, original_1) %>%
+  mutate(CURRENT_LIVING = recode(CURRENT_LIVING, 
+                                 "Living w/ Children" = "Children or Family",
+                                 "Living w/ Other Family" = "Children or Family",
+                                 "Living w/ Others" = "Friends or Others",
+                                 "Living w/ Friends" = "Friends or Others")) 
+partners_time
+
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
+
+# How long have you been in your current relationship?
+partners_months <- partners_time %>%
+  filter(RELATIONSHIP_STATUS != "Single") %>%
+  select(RELATIONSHIP_STATUS, WITH_PARTNER_MONTHS) %>%
+  filter(!is.na(WITH_PARTNER_MONTHS))
+partners_months
+
+# Average time
+partners_months %>%
+  summarize(
+    M = mean(WITH_PARTNER_MONTHS) / 12,
+    SD = sd(WITH_PARTNER_MONTHS) / 12,
+    min = min(WITH_PARTNER_MONTHS),
+    max = max(WITH_PARTNER_MONTHS) / 12
+  )
+
+# Were you living with your partner previously?
+partners_time %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  filter(!is.na(LIVING_BEFORE_LOCKDOWN)) %>%
+  count(LIVING_BEFORE_LOCKDOWN) %>%
+  mutate(
+    percent = n / sum(n)
+  ) %>%
+  arrange(desc(n))
+
+#######
 
 # "Have you used technology more to keep in contact with your partner?"
 partner_online_label %>%
@@ -159,7 +221,7 @@ summary(change_logit)
 # Please explain how your use of online dating websites has changes, if at all?
 #######
 
-# How many provided a reason for their change in onling dating use?
+# How many provided a reason for their change in online dating use?
 partner_qual %>%
   filter(!is.na(ONLINE_QUAL) & ONLINE_CHANGE != "Same" & RELATIONSHIP_STATUS != "Serious Relationship")
 
@@ -210,7 +272,7 @@ p_qual_online_1 <- p_qual_online %>%
   select(ONLINE_CHANGE, category, everything(), -other)
 p_qual_online_1
 
-# categorys by increase or decrease
+# categories by increase or decrease
 p_qual_online %>%
   select(-ONLINE_QUAL) %>%
   gather(key = "category", value = "occurrence", -ONLINE_CHANGE) %>%
@@ -223,6 +285,104 @@ p_qual_online %>%
   ungroup() %>%
   rbind(p_qual_online_1) %>%
   arrange(desc(n))
+
+# Meet
+32 + 3
+
+# Boredeom
+18 + 3
+
+# Time
+15 + 2
+
+# Other
+5 + 2
+
+# Love
+4 + 2
+
+# TIME SPENT WITH PARTNER -------------------------------------------------
+
+# IMPACT_TIME_PARTNER - scale meaning
+# - 0 = a lot less time
+# - 100 = a lot more time
+
+# Visual inspection of normality
+hist(partners_time$WITH_PARTNER_MONTHS)
+hist(partners_time$IMPACT_TIME_PARTNER)
+
+# Does not make sense to execute a correlation
+
+# How did social lockdown impact the amount of time spent with partners?
+
+# Prepare the analysis
+partners_time_1 <- partners_time %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  filter(!is.na(IMPACT_TIME_PARTNER)) %>%
+  select(RELATIONSHIP_STATUS, LIVE_W_PARTNER, CURRENT_LIVING, IMPACT_TIME_PARTNER)
+partners_time_1
+
+# Just those living with a partner
+pt_w_partner <- partners_time_1 %>%
+  filter(LIVE_W_PARTNER == "Yes") %>%
+  select(IMPACT_TIME_PARTNER) %>%
+  pull()
+pt_w_partner
+
+# Just participants living without a partner
+pt_wo_partner <- partners_time_1 %>%
+  filter(LIVE_W_PARTNER == "No") %>%
+  select(IMPACT_TIME_PARTNER) %>%
+  pull()
+pt_wo_partner
+
+# Serious and casual - living with partners?
+partners_time %>%
+  filter(RELATIONSHIP_STATUS != "Single") %>%
+  filter(!is.na(IMPACT_TIME_PARTNER)) %>%
+  select(RELATIONSHIP_STATUS, LIVE_W_PARTNER, IMPACT_TIME_PARTNER) %>%
+  filter(LIVE_W_PARTNER == "No")
+
+# Therefore, no comparison possible of partner vs. no partner
+
+# Impact of social lockdown on time spent with partner
+partners_time_1 %>%
+  summarize(
+    M = mean(IMPACT_TIME_PARTNER),
+    SD = sd(IMPACT_TIME_PARTNER)
+  )
+
+# Just those living with just a partner
+w_partner_only <- partners_time_1 %>%
+  filter(LIVE_W_PARTNER == "Yes") %>%
+  filter(CURRENT_LIVING == "Living w/ Partner") %>%
+  select(IMPACT_TIME_PARTNER) %>%
+  pull()
+w_partner_only
+
+# Describe
+mean(w_partner_only)
+sd(w_partner_only)
+median(w_partner_only)
+length(w_partner_only)
+mean_rank
+
+# Just participants living without a partner
+w_partner_plus <- partners_time_1 %>%
+  filter(LIVE_W_PARTNER == "Yes") %>%
+  filter(CURRENT_LIVING != "Living w/ Partner") %>%
+  select(IMPACT_TIME_PARTNER) %>%
+  pull()
+w_partner_plus
+
+# Describe
+mean(w_partner_plus)
+sd(w_partner_plus)
+median(w_partner_plus)
+length(w_partner_plus)
+
+# Wilcoxon test (aka Mann-Whitney U test)
+wilcox.test(w_partner_only, w_partner_plus, alternative = "two.sided")
 
 # NLP - PARTNER_CONTACT_QUAL ----------------------------------------------
 
