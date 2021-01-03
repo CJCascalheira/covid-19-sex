@@ -90,6 +90,14 @@ partners_time %>%
   ) %>%
   arrange(desc(n))
 
+# Frequency of participants in serious relationships who lived with their partners
+partners_time %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  count(LIVE_W_PARTNER) %>%
+  mutate(
+    percent = n / 341
+  )
+
 #######
 
 # "Have you used technology more to keep in contact with your partner?"
@@ -365,7 +373,6 @@ mean(w_partner_only)
 sd(w_partner_only)
 median(w_partner_only)
 length(w_partner_only)
-mean_rank
 
 # Just participants living without a partner
 w_partner_plus <- partners_time_1 %>%
@@ -401,16 +408,47 @@ partner_qual %>%
   ) %>%
   nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
 
-# Classify the routines of maintaining partner contact
-p_qual_contact <- partner_qual %>%
+# Real percent, with nonsense removed
+partner_qual %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
+
+# Number of participants in each group
+left_join(partner_qual, original_1) %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  count(LIVE_W_PARTNER)
+
+# Prepare new data frame
+partner_qual_1 <- left_join(partner_qual, original_1) %>%
   # Repeat the filters
   filter(!is.na(PARTNER_CONTACT_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship" &
-         !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))) %>%
-  select(PARTNER_CONTACT_TECH, PARTNER_CONTACT_QUAL) %>%
+           !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a")))
+
+# Classify the routines of maintaining partner contact
+p_qual_contact <- partner_qual_1 %>%
+  select(ID, LIVE_W_PARTNER, PARTNER_CONTACT_TECH, PARTNER_CONTACT_QUAL) %>%
   mutate(
     # Talking and speaking assumed to have occurred face-to-face
     together = ifelse(str_detect(PARTNER_CONTACT_QUAL,
-                                 regex("same house|liv.+togeth|we.+togeth|face to|speak|talking|verbal|liv.+with|in person|home|everywhere|see each|we live|contact|both in the flat|present|relax together|in the house|constantly together", ignore_case = TRUE)),
+                                 regex("same house|liv.+togeth|we.+together(?! on chat)|(?<!yes phone )face to|speak|talking(?! on the phone)|verbal|liv.+with|(?<!Whatsapp and |met )in person|(?<!meeting at )home|everywhere|see each|we live|(?<!Yes not physical )contact|both in the flat|present|relax together|in the house|constantly together|(?<!Not )physically", ignore_case = TRUE)),
       1, 0
     ),
     text = ifelse(str_detect(PARTNER_CONTACT_QUAL,
@@ -436,16 +474,28 @@ p_qual_contact <- partner_qual %>%
     ),
     # Technology mentioned but not specified 
     misc_tech = ifelse(str_detect(PARTNER_CONTACT_QUAL,
-                                  regex("virtual|not physical|technology", ignore_case = TRUE)),
+                                  regex("virtual|not physical|technology|PS4", ignore_case = TRUE)),
       1, 0
     ),
     # Cope with or circumvent social distancing guidelines 
     soc_dist = ifelse(str_detect(PARTNER_CONTACT_QUAL,
-                                 regex("break.+rule|drive way|still see|visit|dinner|spending time|quality time", ignore_case = TRUE)),
+                                 regex("break.+rule|drive way|still see|visit|dinner|spending time|quality time|met in person|near me so|meeting at home", ignore_case = TRUE)),
       1, 0
     )
   )
 p_qual_contact
+
+# Information on together category
+p_qual_contact %>%
+  filter(LIVE_W_PARTNER == "No", together == 1) %>%
+  select(ID, LIVE_W_PARTNER, PARTNER_CONTACT_QUAL)
+
+# Vector of IDs to remove - nonsense values - not living together, but living together?
+filter_ids_contact <- p_qual_contact %>%
+  filter(LIVE_W_PARTNER == "No", together == 1) %>%
+  select(ID) %>%
+  pull()
+filter_ids_contact
 
 # Create an other category
 p_qual_contact_1 <- p_qual_contact %>%
@@ -459,23 +509,30 @@ p_qual_contact_1 <- p_qual_contact %>%
     misc_tech != 1 &
     soc_dist != 1
   ) %>%
-  select(PARTNER_CONTACT_QUAL) %>%
+  select(LIVE_W_PARTNER, PARTNER_CONTACT_QUAL) %>%
   # Assign to category
   mutate(category = rep("other", nrow(.))) %>%
+  group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
   mutate(percent = (n / nrow(p_qual_contact) * 100))
 p_qual_contact_1
 
 # Calculate category frequencies
 p_qual_contact %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  # Remove the ID variable
+  select(-ID) %>%
   select(-starts_with("PARTNER")) %>%
-  gather(key = "category", value = "occurrence") %>%
+  gather(key = "category", value = "occurrence", -LIVE_W_PARTNER) %>%
   # Drop non-occurrence
   filter(occurrence != 0) %>%
+  # Differentiate by partner
+  group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / nrow(p_qual_contact) * 100)) %>%
+  mutate(percent = (n / sum(n) * 100)) %>%
   rbind(p_qual_contact_1) %>%
-  arrange(desc(n))
+  arrange(LIVE_W_PARTNER, desc(n))
 
 # Select example categorys
 example <- p_qual_contact %>%
@@ -488,24 +545,36 @@ View(example)
 #######
 
 # How many provided description
-partner_qual %>%
-  select(RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+left_join(partner_qual, original_1) %>%
+  select(ID, LIVE_W_PARTNER, RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
   filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
   nrow(.)
 
+# Number of participants in each group
+left_join(partner_qual, original_1) %>%
+  select(ID, LIVE_W_PARTNER, RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  count(LIVE_W_PARTNER)
+
 # Classify the descriptions
-p_qual_tech <- partner_qual %>%
-  select(RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
+p_qual_tech <- left_join(partner_qual, original_1) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  select(LIVE_W_PARTNER, RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
   filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
   mutate(
     # No impact perceived
     none = ifelse(str_detect(RELATIONSHIP_TECH,
-                             regex("not much|no impact|not impact|no$|no effect|not at all|haven|it hasn|hasn't$|none|has not|no change|nope|no influen|same$|don't feel like|nil|not sign|nothing sign|not massiv|not subst|didn't.+impact|imposs|don't.+impact|hasn't made|hasn't impact|not had.+impact|^hasn't|about the same", ignore_case = TRUE)),
+                             regex("not much|no impact|not impact|no$|no effect|not at all|haven|it hasn|hasn't$|none|has not|no change|nope|no influen|same$|don't feel like|nil|not sign|nothing sign|not massiv|not subst|didn't.+impact|imposs|don't.+impact|hasn't made|hasn't impact|not had.+impact|^hasn't|about the same|to the same ext", ignore_case = TRUE)),
       1, 0
     ),
     # General positive impact
     positive = ifelse(str_detect(RELATIONSHIP_TECH,
-                                 regex("great|good|helped|positive|improve|very useful|helpful", ignore_case = TRUE)),
+                                 regex("great|good|helped|positive|improve|very useful|helpful|enjoy lots", ignore_case = TRUE)),
       1, 0
     ),
     # Not application for whatever reason
@@ -530,16 +599,36 @@ p_qual_tech <- partner_qual %>%
     ),
     # Necessary and easy
     depend = ifelse(str_detect(RELATIONSHIP_TECH,
-                               regex("depend|eas|on it all|rely.+on|only way|survive|without tech|together without", ignore_case = TRUE)),
+                               regex("depend|eas|on it all|rely.+on|only way|survive|without tech|together without|communicate more direct", ignore_case = TRUE)),
       1, 0
     ),
     # Technology as a distraction or source of disagreement
     dist_disa = ifelse(str_detect(RELATIONSHIP_TECH,
-                                 regex("distract|calls more often|paying att|fall outs|escape|on his phone|talk.+less|speak less|less time on soc|too much time|tensio|phones more than|excuse|not present", ignore_case = TRUE)),
+                                 regex("distract|calls more often|paying att|fall outs|escape|on his phone|talk.+less|speak less|less time on soc|too much time|tensio|phones more than|excuse|not present|less convos", ignore_case = TRUE)),
       1, 0
+    ),
+    # Negative impact
+    negative = ifelse(str_detect(RELATIONSHIP_TECH,
+                                  regex("upset|(?<!very )difficult|doubts", ignore_case = TRUE)),
+                       1, 0
     )
   )
 p_qual_tech
+
+# Explore the other category
+p_qual_tech %>%
+  filter(
+    none != 1 &
+      positive != 1 &
+      not_app != 1 &
+      no_use != 1 &
+      continuity != 1 &
+      est_impact != 1 &
+      depend != 1 &
+      dist_disa != 1 &
+      negative != 1
+  ) %>%
+  select(RELATIONSHIP_TECH)
 
 # Create an other category
 p_qual_tech_1 <- p_qual_tech %>%
@@ -551,27 +640,30 @@ p_qual_tech_1 <- p_qual_tech %>%
     continuity != 1 &
     est_impact != 1 &
     depend != 1 &
-    dist_disa != 1
+    dist_disa != 1 &
+    negative != 1
   ) %>%
-  select(RELATIONSHIP_TECH) %>%
+  select(LIVE_W_PARTNER, RELATIONSHIP_TECH) %>%
   mutate(category = rep("other", nrow(.))) %>%
+  group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
   mutate(percent = (n / nrow(p_qual_tech)) * 100)
 p_qual_tech_1
 
-# Calculate frequency of categorys
+# Calculate frequency of categories
 p_qual_tech %>%
   select(-starts_with("RELATIO")) %>%
-  gather(key = "category", value = "occurrence") %>%
+  gather(key = "category", value = "occurrence", -LIVE_W_PARTNER) %>%
   filter(occurrence != 0) %>%
+  group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / nrow(p_qual_tech)) * 100) %>%
+  mutate(percent = (n / sum(n)) * 100) %>%
   rbind(p_qual_tech_1) %>%
-  arrange(desc(n))
+  arrange(LIVE_W_PARTNER, desc(n))
 
-# Select example categorys
+# Select example categories
 example <- p_qual_tech %>%
-  filter(depend == 1)
+  filter(negative == 1)
 View(example)
 
 # NLP - RELATIONSHIP_QUAL -------------------------------------------------
@@ -590,15 +682,15 @@ partner_qual %>%
 339 / sum(partner_qual$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
 
 # Generate categories
-p_qual_relation <- partner_qual %>%
+p_qual_relation <- left_join(partner_qual, original_1) %>%
   # Remove missing values and participants who are single or casually dating
   filter(!is.na(RELATIONSHIP_QUAL) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
-  select(ID, RELATIONSHIP_QUAL) %>%
+  select(ID, LIVE_W_PARTNER, RELATIONSHIP_QUAL) %>%
   # Create categories from keywords
   mutate(
     # No change
     none = ifelse(str_detect(RELATIONSHIP_QUAL,
-                             regex("hasn.+change|not too much|no impact|not.+change|unaff|not effe|doesnt imp|dont.+change|everything.+same|no issu|don't think.+has|don't.+change|allways|same$|it hasn't|hasn't.+affect|hasn't.+effect|no affec|no effec|no change|isnt at the|much the same|remain.+same|hasn't im|same as it would|minimal imp|same as prev", ignore_case = TRUE)),
+                             regex("hasn.+change|not too much|no impact|not.+change|unaffected(?! but my partner)|not effe|doesnt imp|dont.+change|everything.+same|no issu|don't think.+has|don't.+change|allways|same$|it hasn't(?! really affected them positively)|hasn't affect|hasn't.+effect|no affec|no effec|no change|isnt at the|much the same|remain.+same|hasn't im|same as it would|minimal imp|same as prev", ignore_case = TRUE)),
       1, 0
     ),
     # Less "intimate," which participants used to refer to sex
@@ -608,7 +700,7 @@ p_qual_relation <- partner_qual %>%
     ),
     # More time together perceived as enhancing the affective dimension 
     deeper_bond = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                    regex("affection|more time.+together|closer|bond|more intim|happy|rely on.+other|energy for inti|enjoy|more together|intercourse every|more sex|team|talk more|intim more|strong we are|support|isolation togeth|spend.+time|spend a lot|talk to.+longer|connect more|intimate more|seeing my partner more|more time with.+partner|each other more|move in with|live together$|more time.+each other|depth|now we are|more avail|stronger|valuable time|spend together|more quality|time to spend|see each other|now living|see more of him|living with.+now|have eachother", ignore_case = TRUE)),
+                                    regex("affection|more time.+together|closer|bond|more intim|happy|rely on.+other|energy for inti|enjoy|more together|intercourse every|more sex|team|talk more|intim more|strong we are|support|isolation togeth|spend.+time|spend a lot|talk to.+longer|connect more|intimate more|seeing my partner more|more time with.+partner|each other more|move in with|live together$|more time.+each other|depth|now we are|more avail|stronger|valuable time|spend together|more quality|time to spend|see each other|now living|see more of him|living with.+now|have eachother|positive effect.+sex|more time for sex", ignore_case = TRUE)),
       1, 0
     ),
     # Problems with boundaries or work-life balance---together/working too much
@@ -618,12 +710,12 @@ p_qual_relation <- partner_qual %>%
     ),
     # Less contact with partner
     less_con = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                 regex("see.+less|not.+see|stagnate|long.+apart|see.+in person|unable.+see|home less|missing human|disinteres|cannot do act|haven't.+seen (?!much impact)|lonely|stay in touch|miss being with|miss each other|can't.+see each other|don't.+see each other|can't live toget|cannit|stopped me from|painful.+apart", ignore_case = TRUE)),
+                                 regex("see.+less|not.+see|stagnate|long.+apart|see.+in person|unable.+see|home less|missing human|disinteres|cannot do act|haven't.+seen (?!much impact)|lonely|stay in touch|miss being with|miss each other|can't.+see each other|don't.+see each other|can't live toget|cannit|stopped me from|painful.+apart|unclear when my", ignore_case = TRUE)),
       1, 0
     ),
     # Greater negative arousal
     neg_arousal = ifelse(str_detect(RELATIONSHIP_QUAL,
-                                    regex("anxi|(?<!de-)stress|depress|more distant|worr|feel.+down|mundane|angry|prolonged periods|irrita", ignore_case = TRUE)),
+                                    regex("anxi|(?<!de-)stress|depress|more distant|worr|feel.+down|mundane|angry|prolonged periods|irrita|overpowering", ignore_case = TRUE)),
       1, 0
     ),
     # Generally positive and other category
@@ -653,16 +745,48 @@ p_qual_relation_1 <- p_qual_relation %>%
   )
 p_qual_relation_1
 
+# Show the none category
+p_qual_relation %>%
+  filter(none == 1) %>%
+  select(RELATIONSHIP_QUAL)
+
 # Calculate category frequencies
 p_qual_relation %>%
-  select(-c(ID, RELATIONSHIP_QUAL)) %>%
+  select(-c(ID, RELATIONSHIP_QUAL, LIVE_W_PARTNER)) %>%
   gather(key = "category", value = "occurrence") %>%
   filter(occurrence != 0) %>%
   count(category) %>%
   mutate(percent = (n / nrow(p_qual_relation)) * 100) %>%
   arrange(desc(n))
 
-# Select example categorys
+# Category frequencies by cohabitation vs. LAT
+p_qual_relation_2 <- p_qual_relation %>%
+  select(-c(ID, RELATIONSHIP_QUAL)) %>%
+  gather(key = "category", value = "occurrence", -LIVE_W_PARTNER) %>%
+  filter(occurrence != 0) %>%
+  group_by(LIVE_W_PARTNER) %>%
+  count(category) %>%
+  mutate(percent = (n / sum(n)) * 100) %>%
+  arrange(category, desc(n))
+p_qual_relation_2
+
+# Total number in each partner category
+p_qual_relation %>%
+  count(LIVE_W_PARTNER) %>%
+  mutate(
+    percent = n / nrow(p_qual_relation)
+  )
+
+# Save to file for easy reporting
+write_csv(p_qual_relation_2, "data/results/relationship_quality.csv")
+
+# Example category of living with partner and having less contact
+p_qual_relation %>%
+  filter(LIVE_W_PARTNER == "Yes", less_con == 1) %>%
+  select(RELATIONSHIP_QUAL) %>%
+  View()
+
+# Select example categories
 example <- p_qual_relation %>%
   filter(other == 1)
 View(example)
@@ -671,6 +795,22 @@ View(example)
 survey %>%
   select(ID, AGE, ETHNIC, GENDER) %>%
   filter(ID %in% c(551, 16, 391, 228))
+
+# Demographic of additional block quotes
+quotes_id <- partner_qual %>%
+  filter(
+    str_detect(RELATIONSHIP_QUAL, regex("I have been largely unaffected but my partner")) |
+    str_detect(RELATIONSHIP_QUAL, regex("No change as I moved in with my girl")) |
+    str_detect(RELATIONSHIP_QUAL, regex("No change really, some slight ")) |
+    str_detect(RELATIONSHIP_QUAL, regex("positive effect on our sex"))
+  ) %>%
+  select(ID) %>%
+  pull()
+quotes_id
+
+survey %>%
+  select(ID, AGE, ETHNIC, GENDER) %>%
+  filter(ID %in% quotes_id)
 
 # Percent who mentioned being a key worker
 sum(str_detect(p_qual_relation$RELATIONSHIP_QUAL, 
