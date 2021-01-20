@@ -405,7 +405,7 @@ s_qual_transit <- soctech_qual %>%
                     regex("NA.$|na$|n/a|dont$|less$|(no|not) more|not applicable", ignore_case = TRUE)))
 
 # Percent answering the question
-nrow(s_qual_transit_1) / nrow(soctech_qual)
+nrow(s_qual_transit) / nrow(soctech_qual)
 
 # Categorize responses
 s_qual_transit_1 <- s_qual_transit %>%
