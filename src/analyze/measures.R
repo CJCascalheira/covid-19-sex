@@ -28,6 +28,23 @@ missing <- measures %>%
   filter(percent != 0)
 missing
 
+# Missing values for SDI only
+measures %>%
+  # Drop the ID column
+  select(starts_with("SDI_"), -ID) %>%
+  gather(key = "column", value = "row") %>%
+  mutate(
+    missing = is.na(row)
+  ) %>%
+  # Group by the items
+  group_by(column) %>%
+  # Total number of missing scores per item
+  summarize(
+    total_missing = sum(missing),
+    percent = total_missing / 565
+  ) %>%
+  filter(percent != 0)
+
 # Highest number of missing values
 unique(missing$total_missing)
 

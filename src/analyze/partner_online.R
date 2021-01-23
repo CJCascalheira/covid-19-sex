@@ -62,6 +62,11 @@ partners_time <- left_join(partner_online_label, original_1) %>%
                                  "Living w/ Friends" = "Friends or Others")) 
 partners_time
 
+# Percent living with partner
+original_1 %>%
+  count(LIVE_W_PARTNER) %>%
+  mutate(percent = (n / nrow(original_1)) * 100)
+
 # DESCRIPTIVE ANALYSES ----------------------------------------------------
 
 # How long have you been in your current relationship?
@@ -237,7 +242,7 @@ partner_qual %>%
 p_qual_online <- partner_qual %>%
   # Remove people who reported that their use remained the same & people in serious relationships
   filter(!is.na(ONLINE_QUAL) & ONLINE_CHANGE != "Same" & RELATIONSHIP_STATUS != "Serious Relationship") %>%
-  select(ONLINE_CHANGE, ONLINE_QUAL) %>%
+  select(ID, ONLINE_CHANGE, ONLINE_QUAL) %>%
   mutate(
     # Generally bored or find the app / person boring
     boredom = ifelse(str_detect(ONLINE_QUAL, 
@@ -245,12 +250,12 @@ p_qual_online <- partner_qual %>%
       1, 0
     ),
     time = ifelse(str_detect(ONLINE_QUAL,
-                             regex("^*more.+time", ignore_case = TRUE)),
+                             regex("^*more.+time|busier from working", ignore_case = TRUE)),
       1, 0
     ),
     # Inability to meet
     meet = ifelse(str_detect(ONLINE_QUAL,
-                           regex("^*can.+t meet|can't go|see people|lockdown|lock down|meet.+people|meet up| meet face|ee.+anyone|contact with|leave.+house|keep.+distance", ignore_case = TRUE)),
+                           regex("^*can.+t meet|can't go|see people|(?<!used it before )lockdown|lock down|meet.+people|meet up| meet face|ee.+anyone|contact with|leave.+house|keep.+distance", ignore_case = TRUE)),
       1, 0
     ),
     # Found a loving relationship
@@ -260,6 +265,12 @@ p_qual_online <- partner_qual %>%
     )
   )
 p_qual_online
+
+# People who increased versus decreased
+online_inc_dec <- partner_qual %>%
+  filter(!is.na(ONLINE_QUAL) & ONLINE_CHANGE != "Same" & RELATIONSHIP_STATUS != "Serious Relationship") %>%
+  count(ONLINE_CHANGE)
+online_inc_dec
 
 # Check for other responses
 p_qual_online_1 <- p_qual_online %>%
@@ -275,39 +286,69 @@ p_qual_online_1 <- p_qual_online %>%
   group_by(ONLINE_CHANGE) %>%
   count(other) %>%
   ungroup() %>%
-  mutate(percent = n / nrow(p_qual_online),
+  mutate(percent = (n / nrow(p_qual_online)) * 100,
          category = rep("other", 2)) %>%
   select(ONLINE_CHANGE, category, everything(), -other)
 p_qual_online_1
 
 # categories by increase or decrease
 p_qual_online %>%
-  select(-ONLINE_QUAL) %>%
+  select(-ONLINE_QUAL, -ID) %>%
   gather(key = "category", value = "occurrence", -ONLINE_CHANGE) %>%
   # Remove zeros because the category was not present
   filter(occurrence != 0) %>%
   group_by(ONLINE_CHANGE) %>%
   # How often did the category occur by group
   count(category) %>%
-  mutate(percent = (n / nrow(p_qual_online)) * 100) %>%
+  mutate(percent = if_else(
+    ONLINE_CHANGE == "Decreased",
+    (n / online_inc_dec$n[1]) * 100,
+    (n / online_inc_dec$n[2]) * 100
+  )) %>%
   ungroup() %>%
   rbind(p_qual_online_1) %>%
   arrange(desc(n))
 
-# Meet
-32 + 3
+# Single other category
+p_qual_online_2 <- p_qual_online_1 %>%
+  select(-ONLINE_CHANGE) %>%
+  group_by(category) %>%
+  mutate(
+    n = sum(n),
+    percent = sum(percent) 
+  )
 
-# Boredeom
-18 + 3
+# Overall categories 
+p_qual_online %>%
+  select(-ONLINE_QUAL, -ID) %>%
+  gather(key = "category", value = "occurrence", -ONLINE_CHANGE) %>%
+  # Remove zeros because the category was not present
+  filter(occurrence != 0) %>%
+  # How often did the category occur by group
+  count(category) %>%
+  mutate(percent = (n / nrow(p_qual_online)) * 100) %>%
+  arrange(desc(n)) %>%
+  rbind(p_qual_online_2[1, 1:3])
 
-# Time
-15 + 2
+# Pull examples - increased
+p_qual_online %>%
+  filter(ONLINE_CHANGE == "Increased") %>%
+  filter(boredom == 1) %>%
+  View()
 
-# Other
-5 + 2
+# Pull examples - decreased
+p_qual_online %>%
+  filter(ONLINE_CHANGE == "Decreased") %>%
+  filter(boredom == 1) %>%
+  View()
 
-# Love
-4 + 2
+# IDs of people whose quotes are examples
+online_examples <- c(173, 299, 51, 565, 517, 456, 316, 460, 27, 369, 50, 96)
+
+# Demographic information of the examples
+survey %>%
+  select(ID, AGE, ETHNIC, GENDER) %>%
+  filter(ID %in% online_examples)
 
 # TIME SPENT WITH PARTNER -------------------------------------------------
 
@@ -396,46 +437,6 @@ wilcox.test(w_partner_only, w_partner_plus, alternative = "two.sided")
 # How have you maintained contact with your partner?
 #######
 
-# Percent of participants in serious relationships providing descriptions 
-partner_qual %>%
-  # Remove missing values
-  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
-  # Remove people who are not in a serious relationship
-  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
-  # Remove participants who answered with yes-no-na
-  filter(
-    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
-  ) %>%
-  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
-
-# Real percent, with nonsense removed
-partner_qual %>%
-  # Remove missing values
-  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
-  # Remove people who are not in a serious relationship
-  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
-  # Remove participants who answered with yes-no-na
-  filter(
-    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
-  ) %>%
-  # Remove nonsense values
-  filter(!(ID %in% filter_ids_contact)) %>%
-  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
-
-# Number of participants in each group
-left_join(partner_qual, original_1) %>%
-  # Remove missing values
-  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
-  # Remove people who are not in a serious relationship
-  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
-  # Remove participants who answered with yes-no-na
-  filter(
-    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
-  ) %>%
-  # Remove nonsense values
-  filter(!(ID %in% filter_ids_contact)) %>%
-  count(LIVE_W_PARTNER)
-
 # Prepare new data frame
 partner_qual_1 <- left_join(partner_qual, original_1) %>%
   # Repeat the filters
@@ -497,6 +498,60 @@ filter_ids_contact <- p_qual_contact %>%
   pull()
 filter_ids_contact
 
+# Percent of participants in serious relationships providing descriptions 
+partner_qual %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
+
+# Real percent, with nonsense removed
+partner_qual %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  nrow(.) / sum(survey$RELATIONSHIP_STATUS == "Serious Relationship", na.rm = TRUE)
+
+# Number of participants in each group
+stay_contact <- left_join(partner_qual, original_1) %>%
+  # Remove missing values
+  filter(!is.na(PARTNER_CONTACT_QUAL)) %>%
+  # Remove people who are not in a serious relationship
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>% 
+  # Remove participants who answered with yes-no-na
+  filter(
+    !(PARTNER_CONTACT_QUAL %in% c("Yes", "Yes.", "yes", "YES", "no", "No", "No change", "N/a", "n/a"))
+  ) %>%
+  # Remove nonsense values
+  filter(!(ID %in% filter_ids_contact)) %>%
+  count(LIVE_W_PARTNER)
+stay_contact
+
+# Percent of LAT couples who used at least one form of technology
+p_qual_contact %>%
+  filter(LIVE_W_PARTNER == "No") %>%
+  # Remove nonsense variable
+  filter(!(ID %in% filter_ids_contact)) %>%
+  # Remove non-tech varaibles
+  select(-c("together", "normal", "soc_dist")) %>%
+  # Unite the columns
+  unite(at_least_tech, text:misc_tech) %>%
+  mutate(no_tech = if_else(str_detect(at_least_tech, regex("0_0_0_0_0")), 1, 0)) %>%
+  count(no_tech) %>%
+  mutate(percent = n / 80)
+
 # Create an other category
 p_qual_contact_1 <- p_qual_contact %>%
   filter(
@@ -514,7 +569,11 @@ p_qual_contact_1 <- p_qual_contact %>%
   mutate(category = rep("other", nrow(.))) %>%
   group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / nrow(p_qual_contact) * 100))
+  mutate(percent = if_else(
+    LIVE_W_PARTNER == "No",
+    (n / stay_contact$n[1]) * 100,
+    (n / stay_contact$n[2]) * 100
+  ))
 p_qual_contact_1
 
 # Calculate category frequencies
@@ -530,7 +589,11 @@ p_qual_contact %>%
   # Differentiate by partner
   group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / sum(n) * 100)) %>%
+  mutate(percent = if_else(
+    LIVE_W_PARTNER == "No",
+    (n / stay_contact$n[1]) * 100,
+    (n / stay_contact$n[2]) * 100
+  )) %>%
   rbind(p_qual_contact_1) %>%
   arrange(LIVE_W_PARTNER, desc(n))
 
@@ -553,12 +616,13 @@ left_join(partner_qual, original_1) %>%
   nrow(.)
 
 # Number of participants in each group
-left_join(partner_qual, original_1) %>%
+impact_tech <- left_join(partner_qual, original_1) %>%
   select(ID, LIVE_W_PARTNER, RELATIONSHIP_TECH, RELATIONSHIP_STATUS) %>%
   # Remove nonsense values
   filter(!(ID %in% filter_ids_contact)) %>%
   filter(!is.na(RELATIONSHIP_TECH) & RELATIONSHIP_STATUS == "Serious Relationship") %>%
   count(LIVE_W_PARTNER)
+impact_tech
 
 # Classify the descriptions
 p_qual_tech <- left_join(partner_qual, original_1) %>%
@@ -577,7 +641,7 @@ p_qual_tech <- left_join(partner_qual, original_1) %>%
                                  regex("great|good|helped|positive|improve|very useful|helpful|enjoy lots", ignore_case = TRUE)),
       1, 0
     ),
-    # Not application for whatever reason
+    # Not applicable for whatever reason
     not_app = ifelse(str_detect(RELATIONSHIP_TECH,
                                 regex("^not app|N/A|^na", ignore_case = TRUE)),
       1, 0
@@ -647,24 +711,48 @@ p_qual_tech_1 <- p_qual_tech %>%
   mutate(category = rep("other", nrow(.))) %>%
   group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / nrow(p_qual_tech)) * 100)
+  mutate(percent = if_else(LIVE_W_PARTNER == "No", 
+                           (n / impact_tech$n[1]) * 100, 
+                           (n / impact_tech$n[2]) * 100))
 p_qual_tech_1
 
 # Calculate frequency of categories
-p_qual_tech %>%
+qual_impact_tech <- p_qual_tech %>%
   select(-starts_with("RELATIO")) %>%
   gather(key = "category", value = "occurrence", -LIVE_W_PARTNER) %>%
   filter(occurrence != 0) %>%
   group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / sum(n)) * 100) %>%
+  mutate(percent = if_else(LIVE_W_PARTNER == "No", 
+                           (n / impact_tech$n[1]) * 100, 
+                           (n / impact_tech$n[2]) * 100)) %>%
   rbind(p_qual_tech_1) %>%
   arrange(LIVE_W_PARTNER, desc(n))
+qual_impact_tech
 
 # Select example categories
 example <- p_qual_tech %>%
   filter(negative == 1)
 View(example)
+
+# Fisher exact probability test of two proportions
+# For more info, see http://www.sthda.com/english/wiki/two-proportions-z-test-in-r
+
+# Observed "yes"
+prop_test_x <- qual_impact_tech %>%
+  filter(category == "positive") %>%
+  ungroup() %>%
+  select(n) %>%
+  pull()
+prop_test_x
+
+# Total number
+prop_test_n <- impact_tech$n
+prop_test_n
+
+# Execute  Fisher's exact probability test for two-sample proportions
+prop.test(x = prop_test_x, n = prop_test_n,
+          alternative = "greater")
 
 # NLP - RELATIONSHIP_QUAL -------------------------------------------------
 
@@ -750,7 +838,7 @@ p_qual_relation %>%
   filter(none == 1) %>%
   select(RELATIONSHIP_QUAL)
 
-# Calculate category frequencies
+# Calculate overall category frequencies
 p_qual_relation %>%
   select(-c(ID, RELATIONSHIP_QUAL, LIVE_W_PARTNER)) %>%
   gather(key = "category", value = "occurrence") %>%
@@ -759,6 +847,14 @@ p_qual_relation %>%
   mutate(percent = (n / nrow(p_qual_relation)) * 100) %>%
   arrange(desc(n))
 
+# Separate by group: LAT vs. living w/ partner
+impact_covid <- p_qual_relation %>%
+  count(LIVE_W_PARTNER) %>%
+  mutate(
+    percent = n / nrow(p_qual_relation)
+  )
+impact_covid
+
 # Category frequencies by cohabitation vs. LAT
 p_qual_relation_2 <- p_qual_relation %>%
   select(-c(ID, RELATIONSHIP_QUAL)) %>%
@@ -766,16 +862,13 @@ p_qual_relation_2 <- p_qual_relation %>%
   filter(occurrence != 0) %>%
   group_by(LIVE_W_PARTNER) %>%
   count(category) %>%
-  mutate(percent = (n / sum(n)) * 100) %>%
+  mutate(percent = if_else(
+    LIVE_W_PARTNER == "No",
+    (n / impact_covid$n[1]) * 100,
+    (n / impact_covid$n[2]) * 100
+  )) %>%
   arrange(category, desc(n))
 p_qual_relation_2
-
-# Total number in each partner category
-p_qual_relation %>%
-  count(LIVE_W_PARTNER) %>%
-  mutate(
-    percent = n / nrow(p_qual_relation)
-  )
 
 # Save to file for easy reporting
 write_csv(p_qual_relation_2, "data/results/relationship_quality.csv")
@@ -815,3 +908,23 @@ survey %>%
 # Percent who mentioned being a key worker
 sum(str_detect(p_qual_relation$RELATIONSHIP_QUAL, 
                regex("key worker|keyworker|disinfect", ignore_case = TRUE))) / nrow(p_qual_relation)
+
+# Fisher exact probability test of two proportions
+# For more info, see http://www.sthda.com/english/wiki/two-proportions-z-test-in-r
+
+# Observed "yes"
+prop_test_x <- p_qual_relation_2 %>%
+  filter(category == "deeper_bond") %>%
+  ungroup() %>%
+  arrange(LIVE_W_PARTNER) %>%
+  select(n) %>%
+  pull()
+prop_test_x
+
+# Total number
+prop_test_n <- impact_covid$n
+prop_test_n
+
+# Execute  Fisher's exact probability test for two-sample proportions
+prop.test(x = prop_test_x, n = prop_test_n,
+          alternative = "less")
