@@ -105,35 +105,109 @@ partners_time %>%
 
 #######
 
+partner_online_label %>%
+  count(RELATIONSHIP_STATUS)
+
 # "Have you used technology more to keep in contact with your partner?"
 partner_online_label %>%
-  group_by(RELATIONSHIP_STATUS, PARTNER_CONTACT_TECH) %>%
+  filter(RELATIONSHIP_STATUS == "Single") %>%
+  group_by(PARTNER_CONTACT_TECH) %>%
   count() %>%
-  mutate(percent = n / 565) %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), PARTNER_CONTACT_TECH)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  group_by(PARTNER_CONTACT_TECH) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), PARTNER_CONTACT_TECH)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Casual Relationship") %>%
+  group_by(PARTNER_CONTACT_TECH) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
   arrange(desc(n), PARTNER_CONTACT_TECH)
 
 # "Do you currently have a profile on a website used for online dating or 
 # finding sexual partners? (e.g. Tinder, Grindr, Match.com)"
 partner_online_label %>%
-  group_by(RELATIONSHIP_STATUS, ONLINE_CURRENT) %>%
+  filter(RELATIONSHIP_STATUS == "Single") %>%
+  group_by(ONLINE_CURRENT) %>%
   count() %>%
-  mutate(percent = n / 565) %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_CURRENT)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  group_by(ONLINE_CURRENT) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_CURRENT)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Casual Relationship") %>%
+  group_by(ONLINE_CURRENT) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
   arrange(desc(n), ONLINE_CURRENT)
 
 # "Did you have a profile on a website used for online dating or finding 
 # sexual partners before social lockdown?"
 partner_online_label %>%
-  group_by(RELATIONSHIP_STATUS, ONLINE_BEFORE) %>%
+  filter(RELATIONSHIP_STATUS == "Single") %>%
+  group_by(ONLINE_BEFORE) %>%
   count() %>%
-  mutate(percent = n / 565) %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_BEFORE)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  group_by(ONLINE_BEFORE) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_BEFORE)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Casual Relationship") %>%
+  group_by(ONLINE_BEFORE) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
   arrange(desc(n), ONLINE_BEFORE)
 
 # Has your use of these online sites increased, decreased or remained the 
 # same during social lockdown?
 partner_online_label %>%
-  group_by(RELATIONSHIP_STATUS, ONLINE_CHANGE) %>%
+  filter(RELATIONSHIP_STATUS == "Serious Relationship") %>%
+  group_by(ONLINE_CHANGE) %>%
   count() %>%
-  mutate(percent = n / 565) %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_CHANGE)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Casual Relationship") %>%
+  group_by(ONLINE_CHANGE) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
+  arrange(desc(n), ONLINE_CHANGE)
+
+partner_online_label %>%
+  filter(RELATIONSHIP_STATUS == "Single") %>%
+  group_by(ONLINE_CHANGE) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(percent = n / sum(n)) %>%
   arrange(desc(n), ONLINE_CHANGE)
 
 # Note - makes no sense to explore MSPSS and LONEV3 given that many participants lived with
@@ -430,7 +504,14 @@ median(w_partner_plus)
 length(w_partner_plus)
 
 # Wilcoxon test (aka Mann-Whitney U test)
-wilcox.test(w_partner_only, w_partner_plus, alternative = "two.sided")
+wtest <- wilcox.test(w_partner_only, w_partner_plus, alternative = "two.sided")
+wtest
+
+# Get the z value - https://stats.stackexchange.com/questions/330129/how-to-get-the-z-score-in-wilcox-test-in-r
+wtest_z <- qnorm(wtest$p.value/2)
+
+# Get the effect size
+wtest_z / sqrt(length(w_partner_only) + length(w_partner_plus))
 
 # NLP - PARTNER_CONTACT_QUAL ----------------------------------------------
 
@@ -577,7 +658,7 @@ p_qual_contact_1 <- p_qual_contact %>%
 p_qual_contact_1
 
 # Calculate category frequencies
-p_qual_contact %>%
+maintain_contact <- p_qual_contact %>%
   # Remove nonsense values
   filter(!(ID %in% filter_ids_contact)) %>%
   # Remove the ID variable
@@ -597,7 +678,57 @@ p_qual_contact %>%
   rbind(p_qual_contact_1) %>%
   arrange(LIVE_W_PARTNER, desc(n))
 
-# Select example categorys
+# Significance tests
+mc_total <- maintain_contact %>%
+  summarize(N = sum(n)) %>%
+  pull(N)
+
+mc_1 <- maintain_contact %>%
+  filter(category == "together") %>%
+  pull(n)
+prop.test(x = c(0, mc_1), n = mc_total)
+
+mc_2 <- maintain_contact %>%
+  filter(category == "video") %>%
+  pull(n)
+prop.test(x = mc_2, n = mc_total)
+
+mc_3 <- maintain_contact %>%
+  filter(category == "social_media") %>%
+  pull(n)
+prop.test(x = mc_3, n = mc_total)
+
+mc_4 <- maintain_contact %>%
+  filter(category == "phonecall") %>%
+  pull(n)
+prop.test(x = mc_4, n = mc_total)
+
+mc_5 <- maintain_contact %>%
+  filter(category == "text") %>%
+  pull(n)
+prop.test(x = mc_5, n = mc_total)
+
+mc_6 <- maintain_contact %>%
+  filter(category == "soc_dist") %>%
+  pull(n)
+prop.test(x = mc_6, n = mc_total)
+
+mc_7 <- maintain_contact %>%
+  filter(category == "misc_tech") %>%
+  pull(n)
+prop.test(x = c(mc_7, 0), n = mc_total)
+
+mc_8 <- maintain_contact %>%
+  filter(category == "other") %>%
+  pull(n)
+prop.test(x = mc_8, n = mc_total)
+
+mc_9 <- maintain_contact %>%
+  filter(category == "normal") %>%
+  pull(n)
+prop.test(x = mc_9, n = mc_total)
+
+# Select example categories
 example <- p_qual_contact %>%
   filter(misc_tech == 1)
 View(example)
@@ -729,6 +860,61 @@ qual_impact_tech <- p_qual_tech %>%
   rbind(p_qual_tech_1) %>%
   arrange(LIVE_W_PARTNER, desc(n))
 qual_impact_tech
+
+# Significance tests
+qit_total <- qual_impact_tech %>%
+  summarize(N = sum(n)) %>%
+  pull(N)
+
+qit_1 <- qual_impact_tech %>%
+  filter(category == "continuity") %>%
+  pull(n)
+prop.test(x = qit_1, n = qit_total)
+
+qit_2 <- qual_impact_tech %>%
+  filter(category == "positive") %>%
+  pull(n)
+prop.test(x = qit_2, n = qit_total)
+
+qit_3 <- qual_impact_tech %>%
+  filter(category == "depend") %>%
+  pull(n)
+prop.test(x = qit_3, n = qit_total)
+
+qit_4 <- qual_impact_tech %>%
+  filter(category == "none") %>%
+  pull(n)
+prop.test(x = qit_4, n = qit_total)
+
+qit_5 <- qual_impact_tech %>%
+  filter(category == "est_impact") %>%
+  pull(n)
+prop.test(x = qit_5, n = qit_total)
+
+qit_6 <- qual_impact_tech %>%
+  filter(category == "negative") %>%
+  pull(n)
+prop.test(x = c(qit_6, 0), n = qit_total)
+
+qit_7 <- qual_impact_tech %>%
+  filter(category == "not_app") %>%
+  pull(n)
+prop.test(x = qit_7, n = qit_total)
+
+qit_8 <- qual_impact_tech %>%
+  filter(category == "other") %>%
+  pull(n)
+prop.test(x = qit_8, n = qit_total)
+
+qit_9 <- qual_impact_tech %>%
+  filter(category == "dist_disa") %>%
+  pull(n)
+prop.test(x = c(0, qit_9), n = qit_total)
+
+qit_10 <- qual_impact_tech %>%
+  filter(category == "no_use") %>%
+  pull(n)
+prop.test(x = c(0, qit_10), n = qit_total)
 
 # Select example categories
 example <- p_qual_tech %>%
@@ -914,7 +1100,7 @@ sum(str_detect(p_qual_relation$RELATIONSHIP_QUAL,
 
 # Observed "yes"
 prop_test_x <- p_qual_relation_2 %>%
-  filter(category == "deeper_bond") %>%
+  filter(category == "rec_cope") %>%
   ungroup() %>%
   arrange(LIVE_W_PARTNER) %>%
   select(n) %>%
@@ -927,4 +1113,4 @@ prop_test_n
 
 # Execute  Fisher's exact probability test for two-sample proportions
 prop.test(x = prop_test_x, n = prop_test_n,
-          alternative = "less")
+          alternative = "greater")
